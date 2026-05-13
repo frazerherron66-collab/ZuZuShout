@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AvatarMask } from "@/components/AvatarMask";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
-import { Search, Flag, Video, LogOut, Link2 } from "lucide-react";
+import { Search, Flag, Video as VideoIcon, LogOut, Link2 } from "lucide-react";
 
 type Video = Database["public"]["Tables"]["videos"]["Row"];
 type Cat = Database["public"]["Enums"]["video_category"];
@@ -111,7 +111,7 @@ function ChildView() {
             </Link>
           )}
           <Link to="/record" className="btn-bubbly btn-primary !py-2 !px-4 !text-sm">
-            <Video className="inline w-4 h-4 mr-1" />Record
+            <VideoIcon className="inline w-4 h-4 mr-1" />Record
           </Link>
           <button onClick={signOut} className="p-2 rounded-full hover:bg-muted" aria-label="Sign out">
             <LogOut className="w-5 h-5" />
