@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-export const Route = createFileRoute("/child/link")({
+export const Route = createFileRoute("/link")({
   component: LinkParent,
 });
 
