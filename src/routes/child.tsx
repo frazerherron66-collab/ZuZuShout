@@ -106,11 +106,11 @@ function ChildView() {
             </div>
           </div>
           {!profile.paired_with && (
-            <Link to="/child/link" className="btn-bubbly btn-accent !py-2 !px-4 !text-sm">
+            <Link to="/link" className="btn-bubbly btn-accent !py-2 !px-4 !text-sm">
               <Link2 className="inline w-4 h-4 mr-1" />Link parent
             </Link>
           )}
-          <Link to="/child/record" className="btn-bubbly btn-primary !py-2 !px-4 !text-sm">
+          <Link to="/record" className="btn-bubbly btn-primary !py-2 !px-4 !text-sm">
             <Video className="inline w-4 h-4 mr-1" />Record
           </Link>
           <button onClick={signOut} className="p-2 rounded-full hover:bg-muted" aria-label="Sign out">

@@ -5,7 +5,7 @@ import { AvatarMask, AVATAR_OPTIONS, type AvatarTemplate } from "@/components/Av
 import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 
-export const Route = createFileRoute("/child/record")({
+export const Route = createFileRoute("/record")({
   component: Record,
 });
 
