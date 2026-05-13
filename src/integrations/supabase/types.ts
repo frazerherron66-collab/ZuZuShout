@@ -14,16 +14,204 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          avatar: Database["public"]["Enums"]["avatar_template"]
+          created_at: string
+          id: string
+          paired_with: string | null
+          pairing_code: string | null
+          pairing_code_expires_at: string | null
+          paused: boolean
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          avatar?: Database["public"]["Enums"]["avatar_template"]
+          created_at?: string
+          id: string
+          paired_with?: string | null
+          pairing_code?: string | null
+          pairing_code_expires_at?: string | null
+          paused?: boolean
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          avatar?: Database["public"]["Enums"]["avatar_template"]
+          created_at?: string
+          id?: string
+          paired_with?: string | null
+          pairing_code?: string | null
+          pairing_code_expires_at?: string | null
+          paused?: boolean
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profiles_paired_with_fkey"
+            columns: ["paired_with"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reports: {
+        Row: {
+          created_at: string
+          id: string
+          reporter_id: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reporter_id: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reporter_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      search_history: {
+        Row: {
+          child_id: string
+          created_at: string
+          id: string
+          query: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          id?: string
+          query: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          id?: string
+          query?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "search_history_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shouts: {
+        Row: {
+          child_id: string
+          created_at: string
+          id: string
+          video_id: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          id?: string
+          video_id: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shouts_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shouts_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      videos: {
+        Row: {
+          category: Database["public"]["Enums"]["video_category"]
+          created_at: string
+          creator_avatar: Database["public"]["Enums"]["avatar_template"]
+          creator_name: string
+          description: string | null
+          id: string
+          title: string
+          video_url: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["video_category"]
+          created_at?: string
+          creator_avatar?: Database["public"]["Enums"]["avatar_template"]
+          creator_name: string
+          description?: string | null
+          id?: string
+          title: string
+          video_url: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["video_category"]
+          created_at?: string
+          creator_avatar?: Database["public"]["Enums"]["avatar_template"]
+          creator_name?: string
+          description?: string | null
+          id?: string
+          title?: string
+          video_url?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_paired_with: { Args: { _uid: string }; Returns: string }
+      redeem_pairing_code: { Args: { _code: string }; Returns: string }
     }
     Enums: {
-      [_ in never]: never
+      avatar_template: "fox" | "panda" | "robot" | "cat" | "dino"
+      user_role: "child" | "parent"
+      video_category:
+        | "laboratory"
+        | "pixel_play"
+        | "studio"
+        | "vibe_flow"
+        | "nature_scouts"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +338,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      avatar_template: ["fox", "panda", "robot", "cat", "dino"],
+      user_role: ["child", "parent"],
+      video_category: [
+        "laboratory",
+        "pixel_play",
+        "studio",
+        "vibe_flow",
+        "nature_scouts",
+      ],
+    },
   },
 } as const
