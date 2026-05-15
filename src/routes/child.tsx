@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { AvatarMask } from "@/components/AvatarMask";
+import { AvatarMask } from "@/components/AvatarMask"; 
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { Search, Flag, Video as VideoIcon, LogOut, Link2 } from "lucide-react";
@@ -41,13 +41,18 @@ function ChildView() {
     setPaused(profile?.paused ?? false);
   }, [profile?.paused]);
 
-  // Realtime: pause flag from parent
   useEffect(() => {
     if (!user) return;
     const ch = supabase
       .channel(`profile-${user.id}`)
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "profiles", filter: `id=eq.${user.id}` },
-        (p) => { setPaused(Boolean((p.new as Record<string, unknown>).paused)); })
+      .on("postgres_changes", { 
+          event: "UPDATE", 
+          schema: "public", 
+          table: "profiles", 
+          filter: `id=eq.${user.id}` 
+      }, (p) => { 
+          setPaused(Boolean((p.new as Record<string, unknown>).paused)); 
+      })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [user]);
@@ -95,7 +100,6 @@ function ChildView() {
 
   return (
     <div className="min-h-screen pb-12">
-      {/* Header */}
       <header className="sticky top-0 z-30 backdrop-blur bg-background/80 border-b-2 border-border">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <AvatarMask template={profile.avatar} size={44} />
@@ -118,7 +122,6 @@ function ChildView() {
           </button>
         </div>
 
-        {/* Search */}
         <div className="max-w-5xl mx-auto px-4 pb-3">
           <form onSubmit={submitSearch} className="flex gap-2">
             <div className="flex-1 relative">
@@ -130,7 +133,6 @@ function ChildView() {
           </form>
         </div>
 
-        {/* Categories */}
         <div className="max-w-5xl mx-auto px-4 pb-3 flex gap-2 overflow-x-auto">
           {CATS.map((c) => (
             <button key={c.id} onClick={() => setCat(c.id)}
@@ -145,7 +147,6 @@ function ChildView() {
         </div>
       </header>
 
-      {/* Feed */}
       <main className="max-w-3xl mx-auto px-4 pt-6 space-y-6">
         {videos.length === 0 && <p className="text-center text-muted-foreground">No videos yet.</p>}
         {videos.map((v) => (
