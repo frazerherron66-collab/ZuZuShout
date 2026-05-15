@@ -19,7 +19,6 @@ import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as FeedRouteImport } from './routes/feed'
 import { Route as ChildRouteImport } from './routes/child'
 import { Route as AuthRouteImport } from './routes/auth'
-import { Route as IndexRouteImport } from './routes/index'
 
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
@@ -71,14 +70,8 @@ const AuthRoute = AuthRouteImport.update({
   path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/child': typeof ChildRoute
   '/feed': typeof FeedRoute
@@ -91,7 +84,6 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/child': typeof ChildRoute
   '/feed': typeof FeedRoute
@@ -105,7 +97,6 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/child': typeof ChildRoute
   '/feed': typeof FeedRoute
@@ -120,7 +111,6 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/auth'
     | '/child'
     | '/feed'
@@ -133,7 +123,6 @@ export interface FileRouteTypes {
     | '/search'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/auth'
     | '/child'
     | '/feed'
@@ -146,7 +135,6 @@ export interface FileRouteTypes {
     | '/search'
   id:
     | '__root__'
-    | '/'
     | '/auth'
     | '/child'
     | '/feed'
@@ -160,7 +148,6 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   ChildRoute: typeof ChildRoute
   FeedRoute: typeof FeedRoute
@@ -245,18 +232,10 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   ChildRoute: ChildRoute,
   FeedRoute: FeedRoute,
