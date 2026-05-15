@@ -2,7 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { AvatarMask } from "@/components/AvatarMask";
+// Updated this line to use the correct alias trick for Vercel
+import { AvatarOverlay as AvatarMask } from "@/components/ui/AvatarOverlay";
 import { toast } from "sonner";
 import { LogOut, RefreshCw, Search as SearchIcon, Sparkles } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
@@ -34,7 +35,6 @@ function ParentDashboard() {
     if (profile && profile.role !== "parent") navigate({ to: "/child" });
   }, [user, profile, loading, navigate]);
 
-  // Load paired child
   const loadChild = async () => {
     if (!user) return;
     const { data } = await supabase.from("profiles").select("*").eq("paired_with", user.id).maybeSingle();
@@ -49,9 +49,8 @@ function ParentDashboard() {
     }
   };
 
-  useEffect(() => { loadChild(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user, profile?.paired_with]);
+  useEffect(() => { loadChild(); }, [user, profile?.paired_with]);
 
-  // Realtime: new shouts from paired child
   useEffect(() => {
     if (!child) return;
     const ch = supabase
@@ -65,7 +64,6 @@ function ParentDashboard() {
         })
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [child]);
 
   const generateCode = async () => {
@@ -130,7 +128,6 @@ function ParentDashboard() {
           </div>
         ) : (
           <>
-            {/* Linked child + remote pause */}
             <section className="card-bubbly flex flex-wrap items-center gap-4">
               <AvatarMask template={child.avatar} size={72} />
               <div className="flex-1 min-w-[160px]">
