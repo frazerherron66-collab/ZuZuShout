@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 // Updated this line to use the correct alias trick for Vercel
-import { AvatarOverlay as AvatarMask } from "@/components/ui/AvatarOverlay";
+import { AvatarOverlay as AvatarMask } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { LogOut, RefreshCw, Search as SearchIcon, Sparkles } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
