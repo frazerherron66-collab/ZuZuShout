@@ -1,129 +1,137 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { z } from "zod";
+import { useState } from 'react';
 import { supabase } from "@/integrations/supabase/client";
-import { AVATAR_OPTIONS, AvatarMask, type AvatarTemplate } from "@/components/AvatarMask";
+import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { toast } from "sonner";
 
-const search = z.object({
-  role: z.enum(["child", "parent"]).default("child"),
-});
-
-export const Route = createFileRoute("/auth")({
-  validateSearch: search,
+export const Route = createFileRoute('/auth')({
   component: AuthPage,
 });
 
 function AuthPage() {
-  const { role } = Route.useSearch();
+  const { role } = Route.useSearch<{ role?: string }>();
+  const currentRole = role || 'child';
+  
+  const [isLoggingIn, setIsLoggingIn] = useState(true); 
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signup" | "login">("signup");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [username, setUsername] = useState("");
-  const [avatar, setAvatar] = useState<AvatarTemplate>("fox");
-  const [busy, setBusy] = useState(false);
 
-  const submit = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBusy(true);
-    try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/`,
-            data: { username: username || email.split("@")[0], role, avatar },
-          },
-        });
-        if (error) throw error;
-        toast.success("Account created! Check your email to verify, then sign in.");
-        setMode("login");
+    setLoading(true);
+
+    if (isLoggingIn) {
+      // --- LOGIN LOGIC ---
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast.error(error.message);
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        const { data: prof } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
-        navigate({ to: prof?.role === "parent" ? "/parent" : "/child" });
+        toast.success("Welcome back!");
+        navigate({ to: currentRole === 'parent' ? '/parent-dashboard' : '/feed' });
       }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Something went wrong";
-      toast.error(msg);
-    } finally {
-      setBusy(false);
+    } else {
+      // --- SIGN UP LOGIC ---
+      const { data, error: authError } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: { data: { role: currentRole } } 
+      });
+
+      if (authError) {
+        toast.error(authError.message);
+      } else if (data.user) {
+        // --- PERMANENT FIX: CREATE PROFILE IMMEDIATELY ---
+        // This ensures the user exists in the 'profiles' table so they can post videos
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            { 
+              id: data.user.id, 
+              username: email.split('@')[0], // Default username from email
+              avatar_url: `https://api.dicebear.com/7.x/adventurer/svg?seed=${data.user.id}`,
+              bio: 'Welcome to my space! 🚀'
+            }
+          ]);
+
+        if (profileError) {
+          console.error("Profile auto-creation error:", profileError);
+          // We don't block the user, but they might need to save profile manually later
+        }
+
+        toast.success("Account Created! You can log in now.");
+        setIsLoggingIn(true);
+      }
     }
+    setLoading(false);
   };
 
+  const isParent = currentRole === 'parent';
+  const bgColor = isParent ? 'bg-slate-900' : 'bg-yellow-400';
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="card-bubbly w-full max-w-md">
-        <div className="text-center mb-6">
-          <div className="inline-block rounded-full px-4 py-1.5 mb-3 font-bold text-xs uppercase tracking-wider" style={{ background: "var(--accent)", color: "var(--accent-foreground)" }}>
-            {role === "parent" ? "Parent" : "Kid"} • {mode === "signup" ? "Sign up" : "Sign in"}
-          </div>
-          <h1 className="text-3xl font-extrabold">
-            {mode === "signup" ? `Welcome, ${role === "parent" ? "guardian!" : "creator!"}` : "Welcome back!"}
-          </h1>
+    <div className={`min-h-screen ${bgColor} flex items-center justify-center p-6 transition-colors duration-500`}>
+      <div className="max-w-5xl w-full grid md:grid-cols-12 gap-6 items-stretch">
+        
+        <div className="md:col-span-4 flex flex-col justify-center order-2 md:order-1">
+          <button 
+            onClick={() => setIsLoggingIn(!isLoggingIn)}
+            className="group h-full bg-white/20 hover:bg-white/30 border-4 border-dashed border-white/60 p-8 rounded-[40px] text-center transition-all flex flex-col items-center justify-center gap-4 shadow-inner"
+          >
+            <p className="text-white font-black text-2xl uppercase tracking-tighter italic">
+              {isLoggingIn ? "New Here?" : "Have an account?"}
+            </p>
+            <span className="bg-white text-slate-900 px-8 py-3 rounded-2xl font-black text-sm group-hover:scale-110 transition-transform shadow-lg">
+              {isLoggingIn ? "CREATE ACCOUNT" : "GO TO LOGIN"}
+            </span>
+          </button>
         </div>
 
-        <form onSubmit={submit} className="space-y-4">
-          {mode === "signup" && (
-            <>
-              <Field label="Username">
-                <input value={username} onChange={(e) => setUsername(e.target.value)} required minLength={2} maxLength={30} className={inputClass} placeholder="awesome_fox" />
-              </Field>
-              {role === "child" && (
-                <div>
-                  <label className="block font-bold mb-2">Pick your avatar</label>
-                  <div className="grid grid-cols-5 gap-2">
-                    {AVATAR_OPTIONS.map((o) => (
-                      <button
-                        key={o.id}
-                        type="button"
-                        onClick={() => setAvatar(o.id)}
-                        className={`rounded-2xl p-2 transition-all ${avatar === o.id ? "ring-4 ring-offset-2" : "opacity-70 hover:opacity-100"}`}
-                        style={{ ['--tw-ring-color' as string]: "var(--primary)" }}
-                        aria-label={o.label}
-                      >
-                        <AvatarMask template={o.id} size={48} />
-                        <div className="text-xs mt-1 font-bold">{o.label}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-          <Field label="Email">
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} placeholder="you@example.com" />
-          </Field>
-          <Field label="Password">
-            <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} placeholder="••••••••" />
-          </Field>
-          <button type="submit" disabled={busy} className="btn-bubbly btn-primary w-full disabled:opacity-60">
-            {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
-          </button>
-        </form>
+        <div className="md:col-span-8 bg-white rounded-[50px] p-10 md:p-16 shadow-2xl border-4 border-black order-1 md:order-2">
+          <div className="mb-10">
+            <h1 className="text-5xl font-black italic tracking-tighter uppercase text-black leading-none">
+              {isLoggingIn ? "Log In" : "Sign Up"}
+            </h1>
+            <p className="text-gray-400 font-bold mt-2 uppercase text-xs tracking-widest">
+              {isParent ? "Parent Dashboard Access" : "Kid Safe Zone"}
+            </p>
+          </div>
 
-        <div className="mt-4 text-center text-sm">
-          {mode === "signup" ? (
-            <button onClick={() => setMode("login")} className="font-bold underline">Already have an account? Sign in</button>
-          ) : (
-            <button onClick={() => setMode("signup")} className="font-bold underline">New here? Create an account</button>
-          )}
+          <form onSubmit={handleAuth} className="space-y-5">
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase ml-4 text-gray-400">Email Address</label>
+              <input 
+                type="email" 
+                placeholder="email@example.com" 
+                className="w-full p-5 rounded-2xl border-2 border-gray-100 bg-gray-50 font-bold outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase ml-4 text-gray-400">Password</label>
+              <input 
+                type="password" 
+                placeholder="••••••••" 
+                className="w-full p-5 rounded-2xl border-2 border-gray-100 bg-gray-50 font-bold outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+
+            <button 
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white p-6 rounded-3xl font-black text-2xl hover:brightness-110 active:scale-95 transition-all shadow-[0_8px_0_rgba(0,0,0,0.2)] mt-4 uppercase italic tracking-tighter"
+            >
+              {loading ? 'WAITING...' : (isLoggingIn ? "Let's Go! 🚀" : "Register! ✨")}
+            </button>
+          </form>
         </div>
       </div>
-    </div>
-  );
-}
-
-const inputClass = "w-full rounded-2xl border-2 border-input bg-white px-4 py-3 text-base font-medium focus:outline-none focus:border-primary transition";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="block font-bold mb-1.5">{label}</label>
-      {children}
     </div>
   );
 }

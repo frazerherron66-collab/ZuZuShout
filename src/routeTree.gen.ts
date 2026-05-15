@@ -9,16 +9,36 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as RecordRouteImport } from './routes/record'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ParentDashboardRouteImport } from './routes/parent-dashboard'
 import { Route as ParentRouteImport } from './routes/parent'
 import { Route as LinkRouteImport } from './routes/link'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as FeedRouteImport } from './routes/feed'
 import { Route as ChildRouteImport } from './routes/child'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RecordRoute = RecordRouteImport.update({
   id: '/record',
   path: '/record',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ParentDashboardRoute = ParentDashboardRouteImport.update({
+  id: '/parent-dashboard',
+  path: '/parent-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ParentRoute = ParentRouteImport.update({
@@ -29,6 +49,16 @@ const ParentRoute = ParentRouteImport.update({
 const LinkRoute = LinkRouteImport.update({
   id: '/link',
   path: '/link',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedRoute = FeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChildRoute = ChildRouteImport.update({
@@ -51,51 +81,126 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/child': typeof ChildRoute
+  '/feed': typeof FeedRoute
+  '/inbox': typeof InboxRoute
   '/link': typeof LinkRoute
   '/parent': typeof ParentRoute
+  '/parent-dashboard': typeof ParentDashboardRoute
+  '/profile': typeof ProfileRoute
   '/record': typeof RecordRoute
+  '/search': typeof SearchRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/child': typeof ChildRoute
+  '/feed': typeof FeedRoute
+  '/inbox': typeof InboxRoute
   '/link': typeof LinkRoute
   '/parent': typeof ParentRoute
+  '/parent-dashboard': typeof ParentDashboardRoute
+  '/profile': typeof ProfileRoute
   '/record': typeof RecordRoute
+  '/search': typeof SearchRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/child': typeof ChildRoute
+  '/feed': typeof FeedRoute
+  '/inbox': typeof InboxRoute
   '/link': typeof LinkRoute
   '/parent': typeof ParentRoute
+  '/parent-dashboard': typeof ParentDashboardRoute
+  '/profile': typeof ProfileRoute
   '/record': typeof RecordRoute
+  '/search': typeof SearchRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/child' | '/link' | '/parent' | '/record'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/child'
+    | '/feed'
+    | '/inbox'
+    | '/link'
+    | '/parent'
+    | '/parent-dashboard'
+    | '/profile'
+    | '/record'
+    | '/search'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/child' | '/link' | '/parent' | '/record'
-  id: '__root__' | '/' | '/auth' | '/child' | '/link' | '/parent' | '/record'
+  to:
+    | '/'
+    | '/auth'
+    | '/child'
+    | '/feed'
+    | '/inbox'
+    | '/link'
+    | '/parent'
+    | '/parent-dashboard'
+    | '/profile'
+    | '/record'
+    | '/search'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth'
+    | '/child'
+    | '/feed'
+    | '/inbox'
+    | '/link'
+    | '/parent'
+    | '/parent-dashboard'
+    | '/profile'
+    | '/record'
+    | '/search'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   ChildRoute: typeof ChildRoute
+  FeedRoute: typeof FeedRoute
+  InboxRoute: typeof InboxRoute
   LinkRoute: typeof LinkRoute
   ParentRoute: typeof ParentRoute
+  ParentDashboardRoute: typeof ParentDashboardRoute
+  ProfileRoute: typeof ProfileRoute
   RecordRoute: typeof RecordRoute
+  SearchRoute: typeof SearchRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/record': {
       id: '/record'
       path: '/record'
       fullPath: '/record'
       preLoaderRoute: typeof RecordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/parent-dashboard': {
+      id: '/parent-dashboard'
+      path: '/parent-dashboard'
+      fullPath: '/parent-dashboard'
+      preLoaderRoute: typeof ParentDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/parent': {
@@ -110,6 +215,20 @@ declare module '@tanstack/react-router' {
       path: '/link'
       fullPath: '/link'
       preLoaderRoute: typeof LinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed': {
+      id: '/feed'
+      path: '/feed'
+      fullPath: '/feed'
+      preLoaderRoute: typeof FeedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/child': {
@@ -140,10 +259,25 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   ChildRoute: ChildRoute,
+  FeedRoute: FeedRoute,
+  InboxRoute: InboxRoute,
   LinkRoute: LinkRoute,
   ParentRoute: ParentRoute,
+  ParentDashboardRoute: ParentDashboardRoute,
+  ProfileRoute: ProfileRoute,
   RecordRoute: RecordRoute,
+  SearchRoute: SearchRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
