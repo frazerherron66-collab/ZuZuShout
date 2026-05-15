@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { avatarOverlay as avatarMask } from "@/components/ui/avatarOverlay";
+import { avatarOverlay as avatarMask } from "@/components/ui/TEMP_FILE";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { Search, Flag, Video as VideoIcon, LogOut, Link2 } from "lucide-react";
