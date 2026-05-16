@@ -1,8 +1,8 @@
-Set-Content src/server.ts 'import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
+import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
 import { getRouterManifest } from "@tanstack/react-start/router-manifest";
 import { getRouter } from "./router";
 
 export default createStartHandler({
   createRouter: getRouter,
   getRouterManifest,
-})(defaultStreamHandler);'
+})(defaultStreamHandler);
