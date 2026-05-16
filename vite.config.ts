@@ -1,10 +1,12 @@
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+import { defineConfig } from "vite";
+import tsConfigPaths from "vite-tsconfig-paths";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 
 export default defineConfig({
-  tanstackStart: {
-    server: {
-      preset: "vercel",
-      entry: "src/server",
-    },
-  },
+  plugins: [
+    tsConfigPaths(),
+    tanstackStart({
+      server: { preset: "vercel" },
+    }),
+  ],
 });
