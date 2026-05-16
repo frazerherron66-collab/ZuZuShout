@@ -19,8 +19,5 @@
       "src": "/(.*)",
       "dest": "/__server"
     }
-  ],
-  "runtime": "nodejs20.x",
-  "shouldAddHelpers": true,
-  "supportsResponseStreaming": false
+  ]
 }
