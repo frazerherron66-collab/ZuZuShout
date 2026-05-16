@@ -19,5 +19,6 @@
       "src": "/(.*)",
       "dest": "/__server"
     }
-  ]
+  ],
+  "runtime": "nodejs20.x"
 }
