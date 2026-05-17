@@ -1,6 +1,6 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../client";
 import { ArrowLeft, Grid, Heart, Lock, X, ChevronDown, Check, Play, QrCode } from 'lucide-react';
 import { toast } from "sonner";
 import { QRCodeSVG } from 'qrcode.react'; // Import the QR component
@@ -31,7 +31,7 @@ function ProfilePage() {
     username: '',
     avatar_url: '',
     id: '',
-    bio: 'A short bio to describe your space 🦆',
+    bio: 'A short bio to describe your space ??',
     following: 0,
     followers: 0,
     likes: 0

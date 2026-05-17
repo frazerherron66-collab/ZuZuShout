@@ -1,6 +1,6 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "../client";
 import { Bell, Heart, UserPlus, ShieldCheck, MessageCircle, Mail } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -119,11 +119,11 @@ function InboxPage() {
       {/* Navigation - 5-icon layout */}
       <nav className="fixed bottom-0 w-full h-24 bg-black border-t border-white/10 flex justify-around items-center z-50 px-6">
         <Link to="/feed" className="flex flex-col items-center text-white/40">
-          <span className="text-2xl">🏠</span>
+          <span className="text-2xl">??</span>
           <span className="text-[10px] font-black uppercase mt-1 tracking-tighter">Home</span>
         </Link>
         <Link to="/search" className="flex flex-col items-center text-white/40">
-          <span className="text-2xl">🔍</span>
+          <span className="text-2xl">??</span>
           <span className="text-[10px] font-black uppercase mt-1 tracking-tighter">Search</span>
         </Link>
         <div 
@@ -133,11 +133,11 @@ function InboxPage() {
           +
         </div>
         <Link to="/inbox" className="flex flex-col items-center text-white">
-          <span className="text-2xl">📩</span>
+          <span className="text-2xl">??</span>
           <span className="text-[10px] font-black uppercase mt-1 tracking-tighter text-[#fe2c55]">Inbox</span>
         </Link>
         <Link to="/profile" className="flex flex-col items-center text-white/40">
-          <span className="text-2xl">👤</span>
+          <span className="text-2xl">??</span>
           <span className="text-[10px] font-black uppercase mt-1 tracking-tighter">Profile</span>
         </Link>
       </nav>
