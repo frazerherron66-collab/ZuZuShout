@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from "@/client";
+import { supabase } from "@/integrations/supabase/client.server";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { toast } from "sonner";
 
