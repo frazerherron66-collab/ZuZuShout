@@ -1,6 +1,6 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { supabase } from "../client.ts";
+import { supabase } from "@/client";
 import { Search as SearchIcon, Users, Trophy, Music, Zap, Star, ChevronRight, TrendingUp, ArrowLeft } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -199,20 +199,20 @@ function SearchPage() {
       {/* NAVIGATION */}
       <nav className="fixed bottom-0 w-full h-24 bg-black border-t border-white/10 flex justify-around items-center z-50 px-6">
         <Link to="/feed" className="flex flex-col items-center text-white/40">
-          <span className="text-2xl">🏠</span>
+          <span className="text-2xl">??</span>
           <span className="text-[10px] font-black uppercase mt-1 tracking-tighter">Home</span>
         </Link>
         <Link to="/search" className="flex flex-col items-center text-white">
-          <span className="text-2xl">🔍</span>
+          <span className="text-2xl">??</span>
           <span className="text-[10px] font-black uppercase mt-1 tracking-tighter text-[#fe2c55]">Search</span>
         </Link>
         <div onClick={() => navigate({ to: '/record' })} className="w-14 h-10 bg-white rounded-xl flex items-center justify-center text-black font-black text-3xl shadow-lg cursor-pointer active:scale-90 transition-transform">+</div>
         <Link to="/inbox" className="flex flex-col items-center text-white/40">
-          <span className="text-2xl">📩</span>
+          <span className="text-2xl">??</span>
           <span className="text-[10px] font-black uppercase mt-1 tracking-tighter">Inbox</span>
         </Link>
         <Link to="/profile" className="flex flex-col items-center text-white/40">
-          <span className="text-2xl">👤</span>
+          <span className="text-2xl">??</span>
           <span className="text-[10px] font-black uppercase mt-1 tracking-tighter">Profile</span>
         </Link>
       </nav>

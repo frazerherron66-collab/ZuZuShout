@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from "../client.ts";
+import { supabase } from "@/client";
 import { toast } from "sonner";
 import { Upload, X, CheckCircle2 } from 'lucide-react';
 

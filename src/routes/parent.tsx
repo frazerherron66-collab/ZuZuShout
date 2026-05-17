@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "../client.ts";
+import { supabase } from "@/client";
 import { useAuth } from "@/hooks/useAuth";
 // Updated this line to use the correct alias trick for Vercel
 import { avatarOverlay as avatarMask } from "@/components/ui/avatarOverlay";
