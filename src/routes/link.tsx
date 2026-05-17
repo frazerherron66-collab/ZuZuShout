@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "../client";
+import { supabase } from "../client.ts";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 

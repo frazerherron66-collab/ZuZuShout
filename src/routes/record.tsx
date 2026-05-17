@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { supabase } from "../client";
+import { supabase } from "../client.ts";
 import { Camera, Upload, X, Check, RefreshCw, Loader2 } from 'lucide-react';
 import { toast } from "sonner";
 

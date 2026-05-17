@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { supabase } from "../client";
+import { supabase } from "../client.ts";
 import { 
   ShieldCheck, BarChart3, Lock, Users, Clock, 
   CheckCircle2, ArrowLeft, Eye, Trash2, Camera, X, KeyRound

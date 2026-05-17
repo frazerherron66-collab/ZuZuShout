@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { supabase } from "../client";
+import { supabase } from "../client.ts";
 import { ArrowLeft, Grid, Heart, Lock, X, ChevronDown, Check, Play, QrCode } from 'lucide-react';
 import { toast } from "sonner";
 import { QRCodeSVG } from 'qrcode.react'; // Import the QR component
