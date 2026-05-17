@@ -1,1 +1,0 @@
-import{a as e,c as t,o as n}from"./index-CMUkmxgq.js";import"./client-D2V6fHym.js";var r=t(n());e();var i=(0,r.createContext)(void 0);function a(){let e=(0,r.useContext)(i);if(!e)throw Error(`useAuth outside AuthProvider`);return e}export{a as t};
