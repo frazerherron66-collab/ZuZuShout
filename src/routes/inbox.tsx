@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { supabase } from "@/../supabase/functions/_shared/supabase-client";
+import { supabase } from "@/supabase";
 import { Bell, Heart, UserPlus, ShieldCheck, MessageCircle, Mail } from 'lucide-react';
 import { toast } from "sonner";
 
