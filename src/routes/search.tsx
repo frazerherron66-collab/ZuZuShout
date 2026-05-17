@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/supabase/client";
 import { Search as SearchIcon, Users, Trophy, Music, Zap, Star, ChevronRight, TrendingUp, ArrowLeft } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -33,7 +33,7 @@ function SearchPage() {
         const formattedTopics = topics.map((name, i) => ({
           id: i,
           name: name || 'TRENDING',
-          icon: [ <Trophy />, <Zap />, <Music />, <Star /> ][i % 4],
+          icon: [ <Trophy key="trophy" />, <Zap key="zap" />, <Music key="music" />, <Star key="star" /> ][i % 4],
           color: [ 'bg-yellow-400/5', 'bg-emerald-400/5', 'bg-pink-400/5', 'bg-blue-400/5' ][i % 4]
         }));
         setTrendingTopics(formattedTopics);
@@ -91,7 +91,11 @@ function SearchPage() {
     <div className="h-screen w-full bg-black text-white flex flex-col font-sans">
       {/* SEARCH HEADER */}
       <header className="p-6 pt-12 border-b-2 border-white/10 flex items-center gap-4">
-        <button onClick={() => navigate({ to: '/feed' })} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-all">
+        <button 
+          type="button"
+          onClick={() => navigate({ to: '/feed' })} 
+          className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-all"
+        >
           <ArrowLeft size={20} />
         </button>
         <div className="relative group flex-1">
@@ -119,6 +123,7 @@ function SearchPage() {
                 {trendingTopics.map((topic) => (
                   <button 
                     key={topic.id} 
+                    type="button"
                     onClick={() => setSearchQuery(topic.name)} 
                     className={`flex flex-col items-start p-6 rounded-[2rem] border-2 border-white/5 ${topic.color} active:scale-95 transition-all`}
                   >
@@ -153,6 +158,7 @@ function SearchPage() {
                       </div>
                     </div>
                     <button 
+                      type="button"
                       onClick={() => handleFollow(user.id, user.username)}
                       className="bg-white text-black px-6 py-2 rounded-full font-black text-[10px] uppercase active:scale-90 transition-transform"
                     >
@@ -169,13 +175,14 @@ function SearchPage() {
             {searchResults.length > 0 ? searchResults.map((user) => (
               <div key={user.id} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5 animate-in fade-in slide-in-from-bottom-2">
                 <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate({ to: '/profile' })}>
-                  <img src={user.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.username}`} className="w-14 h-14 rounded-full border-2 border-white/20 bg-zinc-800" />
+                  <img src={user.avatar_url || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.username}`} className="w-14 h-14 rounded-full border-2 border-white/20 bg-zinc-800" alt="avatar" />
                   <div>
                     <h3 className="font-black italic uppercase tracking-tighter">@{user.username}</h3>
                     <p className="text-[10px] text-white/40 font-bold uppercase truncate max-w-[150px]">{user.bio || 'New Shouter'}</p>
                   </div>
                 </div>
                 <button 
+                  type="button"
                   onClick={() => handleFollow(user.id, user.username)}
                   className="bg-[#fe2c55] p-3 rounded-xl active:scale-90 transition-all shadow-lg"
                 >
