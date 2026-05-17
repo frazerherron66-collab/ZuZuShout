@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from "@/supabase/client";
+import { supabase } from "@/client";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { toast } from "sonner";
 
@@ -22,7 +22,6 @@ function AuthPage() {
     setLoading(true);
 
     if (isLoggingIn) {
-      // --- LOGIN LOGIC ---
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
         toast.error(error.message);
@@ -31,7 +30,6 @@ function AuthPage() {
         navigate({ to: currentRole === 'parent' ? '/parent-dashboard' : '/feed' });
       }
     } else {
-      // --- SIGN UP LOGIC ---
       const { data, error: authError } = await supabase.auth.signUp({ 
         email, 
         password,
@@ -41,14 +39,12 @@ function AuthPage() {
       if (authError) {
         toast.error(authError.message);
       } else if (data.user) {
-        // --- PERMANENT FIX: CREATE PROFILE IMMEDIATELY ---
-        // This ensures the user exists in the 'profiles' table so they can post videos
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
             { 
               id: data.user.id, 
-              username: email.split('@')[0], // Default username from email
+              username: email.split('@')[0],
               avatar_url: `https://api.dicebear.com/7.x/adventurer/svg?seed=${data.user.id}`,
               bio: 'Welcome to my space! 🚀'
             }
@@ -56,7 +52,6 @@ function AuthPage() {
 
         if (profileError) {
           console.error("Profile auto-creation error:", profileError);
-          // We don't block the user, but they might need to save profile manually later
         }
 
         toast.success("Account Created! You can log in now.");
@@ -129,4 +124,11 @@ function AuthPage() {
               disabled={loading}
               className="w-full bg-blue-600 text-white p-6 rounded-3xl font-black text-2xl hover:brightness-110 active:scale-95 transition-all shadow-[0_8px_0_rgba(0,0,0,0.2)] mt-4 uppercase italic tracking-tighter"
             >
-              {loading ?
+              {loading ? 'WAITING...' : (isLoggingIn ? "Let's Go! 🚀" : "Register! ✨")}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
