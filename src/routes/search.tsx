@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { supabase } from "@/integrations/supabase/client.server";
+import { supabase } from "@/../supabase/functions/_shared/supabase-client";
 import { Search as SearchIcon, Users, Trophy, Music, Zap, Star, ChevronRight, TrendingUp, ArrowLeft } from 'lucide-react';
 import { toast } from "sonner";
 
