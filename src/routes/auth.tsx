@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/supabase/client";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { toast } from "sonner";
 
@@ -68,6 +68,7 @@ function AuthPage() {
 
   const isParent = currentRole === 'parent';
   const bgColor = isParent ? 'bg-slate-900' : 'bg-yellow-400';
+  const inputFocusColor = isParent ? 'focus:border-slate-700 focus:ring-slate-100' : 'focus:border-yellow-400 focus:ring-yellow-100';
 
   return (
     <div className={`min-h-screen ${bgColor} flex items-center justify-center p-6 transition-colors duration-500`}>
@@ -75,6 +76,7 @@ function AuthPage() {
         
         <div className="md:col-span-4 flex flex-col justify-center order-2 md:order-1">
           <button 
+            type="button"
             onClick={() => setIsLoggingIn(!isLoggingIn)}
             className="group h-full bg-white/20 hover:bg-white/30 border-4 border-dashed border-white/60 p-8 rounded-[40px] text-center transition-all flex flex-col items-center justify-center gap-4 shadow-inner"
           >
@@ -103,7 +105,7 @@ function AuthPage() {
               <input 
                 type="email" 
                 placeholder="email@example.com" 
-                className="w-full p-5 rounded-2xl border-2 border-gray-100 bg-gray-50 font-bold outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all"
+                className={`w-full p-5 rounded-2xl border-2 border-gray-100 bg-gray-50 font-bold outline-none ring-4 ring-transparent transition-all ${inputFocusColor}`}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -115,7 +117,7 @@ function AuthPage() {
               <input 
                 type="password" 
                 placeholder="••••••••" 
-                className="w-full p-5 rounded-2xl border-2 border-gray-100 bg-gray-50 font-bold outline-none focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all"
+                className={`w-full p-5 rounded-2xl border-2 border-gray-100 bg-gray-50 font-bold outline-none ring-4 ring-transparent transition-all ${inputFocusColor}`}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -127,11 +129,4 @@ function AuthPage() {
               disabled={loading}
               className="w-full bg-blue-600 text-white p-6 rounded-3xl font-black text-2xl hover:brightness-110 active:scale-95 transition-all shadow-[0_8px_0_rgba(0,0,0,0.2)] mt-4 uppercase italic tracking-tighter"
             >
-              {loading ? 'WAITING...' : (isLoggingIn ? "Let's Go! 🚀" : "Register! ✨")}
-            </button>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
+              {loading ?
