@@ -1,25 +1,23 @@
 {
+  "name": "zuzushout",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
-  }
-},
+  },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
     "@tailwindcss/vite": "^4.3.0",
     "@tanstack/react-query": "^5.100.10",
     "@tanstack/react-router": "1.168.0",
-    "@tanstack/react-start": "1.168.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.16.0",
-    "nitro": "^3.0.260429-beta",
-    "nitro-vite": "^0.0.0",
-    "nitropack": "^2.13.4",
     "qrcode.react": "^4.2.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
