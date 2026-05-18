@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { supabase } from "@/supabase";
+import { supabase } from "../supabase"; 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { toast } from "sonner";
 
 export const Route = createFileRoute('/auth')({
+  // This explicitly declares the search parameters to the compiler safely
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      role: typeof search.role === 'string' ? search.role : 'child',
+    };
+  },
   component: AuthPage,
 });
 
 function AuthPage() {
-  const { role } = Route.useSearch<{ role?: string }>();
+  // Now we can use useSearch cleanly with zero inline casting
+  const { role } = Route.useSearch();
   const currentRole = role || 'child';
   
   const [isLoggingIn, setIsLoggingIn] = useState(true); 
