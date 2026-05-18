@@ -3,13 +3,11 @@ import { supabase } from "../supabase";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { toast } from "sonner";
 
-// 1. Explicitly type the allowed search parameters
 type AuthSearch = {
   role: 'child' | 'parent';
 };
 
 export const Route = createFileRoute('/auth')({
-  // 2. Pass the typed schema to validation so the router compiler is satisfied
   validateSearch: (search: Record<string, unknown>): AuthSearch => {
     return {
       role: (search.role === 'parent' || search.role === 'child') ? search.role : 'child',
@@ -28,8 +26,17 @@ function AuthPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAuth = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
+    
+    // DEBUG ALERT: This forces a popup to show us if the click worked!
+    alert(`Button clicked! Email: ${email} | Mode: ${isLoggingIn ? 'Login' : 'Register'}`);
+    
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -42,6 +49,7 @@ function AuthPage() {
           navigate({ to: currentRole === 'parent' ? '/parent-dashboard' : '/feed' });
         }
       } else {
+        console.log("Attempting Supabase Sign Up...");
         const { data, error: authError } = await supabase.auth.signUp({ 
           email, 
           password,
@@ -51,7 +59,6 @@ function AuthPage() {
         if (authError) {
           toast.error(authError.message);
         } else if (data?.user) {
-          // Try inserting into profiles, but catch any errors so it doesn't crash silently
           const { error: profileError } = await supabase
             .from('profiles')
             .insert([
@@ -64,17 +71,15 @@ function AuthPage() {
             ]);
 
           if (profileError) {
-            console.error("Profile auto-creation error:", profileError);
-            toast.warning("Account created, but profile setup failed. Try logging in!");
-          } else {
-            toast.success("Account Created! Check your email or try logging in.");
+            console.error("Profile error:", profileError);
           }
+          
+          toast.success("Account Created!");
           setIsLoggingIn(true);
         }
       }
     } catch (err) {
-      console.error("Authentication caught an unhandled error:", err);
-      toast.error("An unexpected error occurred. Please check your browser console.");
+      console.error("Caught error:", err);
     } finally {
       setLoading(false);
     }
@@ -113,7 +118,7 @@ function AuthPage() {
             </p>
           </div>
 
-          <form onSubmit={handleAuth} className="space-y-5">
+          <div className="space-y-5">
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase ml-4 text-gray-400">Email Address</label>
               <input 
@@ -122,7 +127,6 @@ function AuthPage() {
                 className={`w-full p-5 rounded-2xl border-2 border-gray-100 bg-gray-50 font-bold outline-none ring-4 ring-transparent transition-all ${inputFocusColor}`}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
             </div>
 
@@ -134,18 +138,19 @@ function AuthPage() {
                 className={`w-full p-5 rounded-2xl border-2 border-gray-100 bg-gray-50 font-bold outline-none ring-4 ring-transparent transition-all ${inputFocusColor}`}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
               />
             </div>
 
+            {/* Direct onClick execution added here */}
             <button 
-              type="submit"
+              type="button"
+              onClick={handleAuth}
               disabled={loading}
               className="w-full bg-blue-600 text-white p-6 rounded-3xl font-black text-2xl hover:brightness-110 active:scale-95 transition-all shadow-[0_8px_0_rgba(0,0,0,0.2)] mt-4 uppercase italic tracking-tighter"
             >
               {loading ? 'WAITING...' : (isLoggingIn ? "Let's Go! 🚀" : "Register! ✨")}
             </button>
-          </form>
+          </div>
         </div>
       </div>
     </div>
