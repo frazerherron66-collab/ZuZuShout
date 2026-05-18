@@ -29,11 +29,8 @@ function AuthPage() {
   const handleAuth = async (e?: React.FormEvent | React.MouseEvent) => {
     if (e) e.preventDefault();
     
-    // DEBUG ALERT: This forces a popup to show us if the click worked!
-    alert(`Button clicked! Email: ${email} | Mode: ${isLoggingIn ? 'Login' : 'Register'}`);
-    
     if (!email || !password) {
-      toast.error("Please fill in all fields");
+      alert("Please fill in both the Email and Password fields!");
       return;
     }
 
@@ -43,13 +40,13 @@ function AuthPage() {
       if (isLoggingIn) {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          toast.error(error.message);
+          alert(`Login Failed: ${error.message}`);
         } else {
-          toast.success("Welcome back!");
+          alert("Login Success! Redirecting...");
           navigate({ to: currentRole === 'parent' ? '/parent-dashboard' : '/feed' });
         }
       } else {
-        console.log("Attempting Supabase Sign Up...");
+        // 1. Attempt the authentication signup
         const { data, error: authError } = await supabase.auth.signUp({ 
           email, 
           password,
@@ -57,8 +54,11 @@ function AuthPage() {
         });
 
         if (authError) {
-          toast.error(authError.message);
+          alert(`Registration Error: ${authError.message}`);
         } else if (data?.user) {
+          alert("Authentication account initialized! Connecting profile row...");
+
+          // 2. Attempt to link the profiles database table row
           const { error: profileError } = await supabase
             .from('profiles')
             .insert([
@@ -71,15 +71,16 @@ function AuthPage() {
             ]);
 
           if (profileError) {
-            console.error("Profile error:", profileError);
+            alert(`Database Profile Error: ${profileError.message}\n\n(Account created, but your custom profiles database table needs checking).`);
+          } else {
+            alert("Account and Profile created successfully! Flipping to Login view.");
           }
           
-          toast.success("Account Created!");
           setIsLoggingIn(true);
         }
       }
-    } catch (err) {
-      console.error("Caught error:", err);
+    } catch (err: any) {
+      alert(`System Exception: ${err?.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -141,7 +142,6 @@ function AuthPage() {
               />
             </div>
 
-            {/* Direct onClick execution added here */}
             <button 
               type="button"
               onClick={handleAuth}
