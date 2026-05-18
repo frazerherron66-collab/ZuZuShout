@@ -3,18 +3,22 @@ import { supabase } from "../supabase";
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { toast } from "sonner";
 
+// 1. Explicitly type the allowed search parameters
+type AuthSearch = {
+  role: 'child' | 'parent';
+};
+
 export const Route = createFileRoute('/auth')({
-  // This explicitly declares the search parameters to the compiler safely
-  validateSearch: (search: Record<string, unknown>) => {
+  // 2. Pass the typed schema to validation so the router compiler is satisfied
+  validateSearch: (search: Record<string, unknown>): AuthSearch => {
     return {
-      role: typeof search.role === 'string' ? search.role : 'child',
+      role: (search.role === 'parent' || search.role === 'child') ? search.role : 'child',
     };
   },
   component: AuthPage,
 });
 
 function AuthPage() {
-  // Now we can use useSearch cleanly with zero inline casting
   const { role } = Route.useSearch();
   const currentRole = role || 'child';
   
@@ -28,44 +32,52 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
 
-    if (isLoggingIn) {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success("Welcome back!");
-        navigate({ to: currentRole === 'parent' ? '/parent-dashboard' : '/feed' });
-      }
-    } else {
-      const { data, error: authError } = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: { data: { role: currentRole } } 
-      });
-
-      if (authError) {
-        toast.error(authError.message);
-      } else if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert([
-            { 
-              id: data.user.id, 
-              username: email.split('@')[0],
-              avatar_url: `https://api.dicebear.com/7.x/adventurer/svg?seed=${data.user.id}`,
-              bio: 'Welcome to my space! 🚀'
-            }
-          ]);
-
-        if (profileError) {
-          console.error("Profile auto-creation error:", profileError);
+    try {
+      if (isLoggingIn) {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success("Welcome back!");
+          navigate({ to: currentRole === 'parent' ? '/parent-dashboard' : '/feed' });
         }
+      } else {
+        const { data, error: authError } = await supabase.auth.signUp({ 
+          email, 
+          password,
+          options: { data: { role: currentRole } } 
+        });
 
-        toast.success("Account Created! You can log in now.");
-        setIsLoggingIn(true);
+        if (authError) {
+          toast.error(authError.message);
+        } else if (data?.user) {
+          // Try inserting into profiles, but catch any errors so it doesn't crash silently
+          const { error: profileError } = await supabase
+            .from('profiles')
+            .insert([
+              { 
+                id: data.user.id, 
+                username: email.split('@')[0],
+                avatar_url: `https://api.dicebear.com/7.x/adventurer/svg?seed=${data.user.id}`,
+                bio: 'Welcome to my space! 🚀'
+              }
+            ]);
+
+          if (profileError) {
+            console.error("Profile auto-creation error:", profileError);
+            toast.warning("Account created, but profile setup failed. Try logging in!");
+          } else {
+            toast.success("Account Created! Check your email or try logging in.");
+          }
+          setIsLoggingIn(true);
+        }
       }
+    } catch (err) {
+      console.error("Authentication caught an unhandled error:", err);
+      toast.error("An unexpected error occurred. Please check your browser console.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const isParent = currentRole === 'parent';
