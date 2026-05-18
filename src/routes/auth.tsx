@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { supabase } from "../supabase"; 
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { toast } from "sonner";
 
 type AuthSearch = {
   role: 'child' | 'parent';
@@ -30,7 +29,7 @@ function AuthPage() {
     if (e) e.preventDefault();
     
     if (!email || !password) {
-      alert("Please fill in both the Email and Password fields!");
+      alert("Please fill in both fields!");
       return;
     }
 
@@ -38,15 +37,17 @@ function AuthPage() {
 
     try {
       if (isLoggingIn) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        // Attempt Login
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        
         if (error) {
           alert(`Login Failed: ${error.message}`);
-        } else {
-          alert("Login Success! Redirecting...");
+        } else if (data?.user) {
+          alert("Login Success! Moving to dashboard...");
           navigate({ to: currentRole === 'parent' ? '/parent-dashboard' : '/feed' });
         }
       } else {
-        // 1. Attempt the authentication signup
+        // Attempt Sign Up
         const { data, error: authError } = await supabase.auth.signUp({ 
           email, 
           password,
@@ -56,9 +57,8 @@ function AuthPage() {
         if (authError) {
           alert(`Registration Error: ${authError.message}`);
         } else if (data?.user) {
-          alert("Authentication account initialized! Connecting profile row...");
+          alert("Auth account created! Linking database profile row...");
 
-          // 2. Attempt to link the profiles database table row
           const { error: profileError } = await supabase
             .from('profiles')
             .insert([
@@ -71,9 +71,9 @@ function AuthPage() {
             ]);
 
           if (profileError) {
-            alert(`Database Profile Error: ${profileError.message}\n\n(Account created, but your custom profiles database table needs checking).`);
+            alert(`Database Profile Error: ${profileError.message}`);
           } else {
-            alert("Account and Profile created successfully! Flipping to Login view.");
+            alert("Account and Profile created successfully!");
           }
           
           setIsLoggingIn(true);
