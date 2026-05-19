@@ -63,7 +63,7 @@ function ParentDashboard() {
       .eq('parent_id', user.id);
 
     if (data) {
-      const children = data.map((item: any) => item.profiles);
+      const children = data.map((item: any) => item.profiles).filter(Boolean);
       setLinkedChildren(children);
       if (children.length > 0 && !selectedChild) {
         setSelectedChild(children[0]);
@@ -104,26 +104,61 @@ function ParentDashboard() {
     }
   };
 
-  // --- SUBMIT PAIRING CODE FROM CHILD SCREEN ---
+  // --- FIXED SUBMIT PAIRING CODE FROM CHILD SCREEN ---
   const handlePairChildSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (inputPairingCode.length !== 6) return toast.error("Please enter a valid 6-digit code");
     
     setIsSubmittingLink(true);
     try {
-      // Execute your specific backend connection function setup
-      const { error } = await supabase.rpc("redeem_pairing_code", { 
-        _code: inputPairingCode.trim() 
+      // 1. Get current logged in parent profile
+      const { data: { user: parentUser } } = await supabase.auth.getUser();
+      if (!parentUser) throw new Error("Parent session not found. Please log in again.");
+
+      // 2. Query child base profiles to translate short code back into a valid full UUID string
+      const { data: allProfiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id');
+
+      if (profileError) throw profileError;
+
+      const targetChild = allProfiles?.find(profile => {
+        const generatedShortCode = profile.id.replace(/\D/g, "").slice(0, 6);
+        return generatedShortCode === inputPairingCode.trim();
       });
 
-      if (error) throw error;
+      if (!targetChild) {
+        throw new Error("Invalid setup code! Double check the numbers on the child's screen.");
+      }
+
+      if (targetChild.id === parentUser.id) {
+        throw new Error("You cannot link a parent account to itself!");
+      }
+
+      // 3. Populate database mapping association to resolve connection loop
+      const { error: insertError } = await supabase
+        .from('parent_child_links')
+        .insert([
+          { 
+            parent_id: parentUser.id, 
+            child_id: targetChild.id 
+          }
+        ]);
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          throw new Error("This child device is already linked to your account!");
+        }
+        throw insertError;
+      }
 
       toast.success("Child account linked successfully! 🚀");
       setShowPairingModal(false);
       setInputPairingCode("");
-      fetchInitialData(); // Refresh list to show newly paired child avatar pill
+      fetchInitialData(); // Reload list state to refresh the visible child pills
     } catch (err: any) {
-      toast.error(`Linking failed: ${err.message}`);
+      toast.error(`Linking failed: ${err.message || err}`);
+      console.error("Pairing trace fault details:", err);
     } finally {
       setIsSubmittingLink(false);
     }
