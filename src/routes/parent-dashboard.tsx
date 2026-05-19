@@ -122,37 +122,45 @@ function ParentDashboard() {
             aspectRatio: 1.0
           },
           async (decodedText) => {
-            // Live on-screen notification showing what text was grabbed from the camera matrix
-            toast.info(`Scanned Code Content: "${decodedText}"`, { duration: 5000 });
-
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-              toast.error("Linking failed: Parent auth session context lost.");
-              return;
-            }
-
-            // Post targeting tracking link directly to backend database
-            const { error } = await supabase
-              .from('parent_child_links')
-              .insert([{ parent_id: user.id, child_id: decodedText }]);
-
-            if (error) {
-              console.error("Supabase Error Logs:", error);
-              // Prints detailed validation feedback errors directly onto the interface
-              toast.error(`Database Error: ${error.message} (Code: ${error.code})`, { duration: 6000 });
-            } else {
-              toast.success("New child added to dashboard!");
-              await fetchInitialData();
-            }
-            
-            // Clean hook termination to close down active hardware loops
+            // Step 1: Instantly close hardware stream so it doesn't lock on mobile layouts
             if (html5Qrcode.isScanning) {
               await html5Qrcode.stop();
             }
             setIsScanning(false);
+
+            // Step 2: Wrap everything in a try/catch block to stop unhandled silent crashes
+            try {
+              toast.info(`Scanned Content: "${decodedText}"`, { duration: 5000 });
+
+              const { data: authData, error: authError } = await supabase.auth.getUser();
+              
+              if (authError || !authData?.user) {
+                toast.error("Authentication Missing: Please re-login to your parent account.");
+                return;
+              }
+
+              const user = authData.user;
+
+              // Step 3: Run the database link entry
+              const { error: dbError } = await supabase
+                .from('parent_child_links')
+                .insert([{ parent_id: user.id, child_id: decodedText }]);
+
+              if (dbError) {
+                console.error("Supabase Error Logs:", dbError);
+                toast.error(`Database Error: ${dbError.message} (Code: ${dbError.code})`, { duration: 6000 });
+              } else {
+                toast.success("New child added to dashboard!");
+                await fetchInitialData();
+              }
+
+            } catch (crashError: any) {
+              console.error("Callback execution caught an app crash:", crashError);
+              toast.error(`App Crash: ${crashError.message || crashError}`);
+            }
           },
           () => {
-            // Keep quiet to minimize process noise across tick streams
+            // Keep empty to avoid performance degradation over frame cycles
           }
         );
       } catch (err: any) {
