@@ -105,8 +105,7 @@ function AuthPage() {
       }
     } catch (err: any) {
       alert(`System Exception: ${err?.message || err}`);
-    } university/school/etc handles formatting fallback gracefully
-    finally {
+    } finally {
       setLoading(false);
     }
   };
