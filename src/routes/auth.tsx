@@ -43,8 +43,32 @@ function AuthPage() {
         if (error) {
           alert(`Login Failed: ${error.message}`);
         } else if (data?.user) {
-          alert("Login Success! Moving to dashboard...");
-          navigate({ to: currentRole === 'parent' ? '/parent-dashboard' : '/feed' });
+          
+          // 1. If Parent, go straight to Parent Dashboard
+          if (currentRole === 'parent') {
+            alert("Login Success! Moving to dashboard...");
+            navigate({ to: '/parent-dashboard' });
+          } else {
+            // 2. If Child, perform a security query check BEFORE choosing the redirect route
+            const { data: linkData, error: linkError } = await supabase
+              .from('parent_child_links')
+              .select('parent_id')
+              .eq('child_id', data.user.id)
+              .maybeSingle();
+
+            if (linkError) {
+              console.error("Auth security gate lookup error:", linkError);
+            }
+
+            // Strict Evaluation: Route to child space ONLY if valid parent link data exists
+            if (linkData && typeof linkData.parent_id === 'string' && linkData.parent_id.trim() !== '') {
+              alert("Login Success! Welcome to your safe space.");
+              navigate({ to: '/child' });
+            } else {
+              alert("Device Unlinked! Moving to pairing setup...");
+              navigate({ to: '/link' });
+            }
+          }
         }
       } else {
         // Attempt Sign Up
@@ -81,7 +105,8 @@ function AuthPage() {
       }
     } catch (err: any) {
       alert(`System Exception: ${err?.message || err}`);
-    } finally {
+    } university/school/etc handles formatting fallback gracefully
+    finally {
       setLoading(false);
     }
   };
