@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { avatarOverlay as avatarMask } from "@/components/ui/avatarOverlay";
+import { avatarOverlay as AvatarMask } from "@/components/ui/avatarOverlay";
 import type { Database } from "@/integrations/supabase/types";
 import { toast } from "sonner";
 import { Search, Flag, Video as VideoIcon, LogOut, Link2 } from "lucide-react";
@@ -31,11 +31,46 @@ function ChildView() {
   const [shouts, setShouts] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [paused, setPaused] = useState(false);
+  const [isPaired, setIsPaired] = useState(false);
+  const [checkingPairing, setCheckingPairing] = useState(true);
 
+  // 1. Auth and Role Routing Gates
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/auth", search: { role: "child" } });
     if (profile && profile.role !== "child") navigate({ to: "/parent" });
   }, [user, profile, loading, navigate]);
+
+  // 2. Active Verification Connection Check Gate
+  useEffect(() => {
+    const verifyPairingStatus = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("parent_child_links")
+          .select("parent_id")
+          .eq("child_id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (!data) {
+          // If no link exists in the system table, push them back to the countdown holding dock
+          navigate({ to: "/link" });
+        } else {
+          setIsPaired(true);
+          setCheckingPairing(false);
+        }
+      } catch (err) {
+        console.error("Pairing lookup failure:", err);
+        setCheckingPairing(false);
+      }
+    };
+
+    if (user && !loading) {
+      verifyPairingStatus();
+    }
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     setPaused(profile?.paused ?? false);
@@ -96,7 +131,13 @@ function ChildView() {
     setSearch("");
   };
 
-  if (loading || !profile) return <div className="min-h-screen grid place-items-center">Loading…</div>;
+  if (loading || checkingPairing || !profile) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-black text-white font-black uppercase text-[10px] tracking-widest">
+        Loading Safe Space…
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen pb-12">
@@ -106,10 +147,10 @@ function ChildView() {
           <div className="flex-1">
             <div className="font-extrabold text-lg leading-tight">Hi {profile.username}!</div>
             <div className="text-xs text-muted-foreground">
-              {profile.paired_with ? "👪 Linked to a parent" : "Not linked yet"}
+              {isPaired ? "👪 Linked to a parent" : "Not linked yet"}
             </div>
           </div>
-          {!profile.paired_with && (
+          {!isPaired && (
             <Link to="/link" className="btn-bubbly btn-accent !py-2 !px-4 !text-sm">
               <Link2 className="inline w-4 h-4 mr-1" />Link parent
             </Link>
