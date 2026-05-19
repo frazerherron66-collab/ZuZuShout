@@ -42,6 +42,7 @@ function ParentDashboard() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // 1. Fetch parent PIN data
     const { data: profile } = await supabase
       .from('profiles')
       .select('parent_pin')
@@ -54,7 +55,8 @@ function ParentDashboard() {
       setIsSettingPin(true);
     }
 
-    const { data } = await supabase
+    // 2. Fetch linked family profiles using structured foreign relationships
+    const { data, error } = await supabase
       .from('parent_child_links')
       .select(`
         child_id,
@@ -62,11 +64,25 @@ function ParentDashboard() {
       `)
       .eq('parent_id', user.id);
 
+    if (error) {
+      console.error("Error fetching linked family data:", error);
+      return;
+    }
+
     if (data) {
       const children = data.map((item: any) => item.profiles).filter(Boolean);
       setLinkedChildren(children);
-      if (children.length > 0 && !selectedChild) {
-        setSelectedChild(children[0]);
+      
+      // Keep selection synced on state loop reloads
+      if (children.length > 0) {
+        setSelectedChild((prev: any) => {
+          if (prev && children.some(c => c.id === prev.id)) {
+            return children.find(c => c.id === prev.id);
+          }
+          return children[0];
+        });
+      } else {
+        setSelectedChild(null);
       }
     }
   };
@@ -104,7 +120,7 @@ function ParentDashboard() {
     }
   };
 
-  // --- FIXED SUBMIT PAIRING CODE FROM CHILD SCREEN ---
+  // --- FIXED: UPDATED MATCH ALGORITHM TO USE PAIRING_CODE COLUMN ---
   const handlePairChildSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanCode = inputPairingCode.replace(/\s/g, "");
@@ -112,22 +128,18 @@ function ParentDashboard() {
     
     setIsSubmittingLink(true);
     try {
-      // 1. Get current logged in parent profile
+      // 1. Verify parent authentication instance
       const { data: { user: parentUser } } = await supabase.auth.getUser();
       if (!parentUser) throw new Error("Parent session not found. Please log in again.");
 
-      // 2. Pull all profiles to accurately find the matched child token
-      const { data: allProfiles, error: profileError } = await supabase
+      // 2. Query target profile directly matching the exact code column value
+      const { data: targetChild, error: profileError } = await supabase
         .from('profiles')
-        .select('id');
+        .select('id, role')
+        .eq('pairing_code', cleanCode)
+        .maybeSingle();
 
       if (profileError) throw profileError;
-
-      // Cleanly matches the same string truncation algorithm used in link.tsx
-      const targetChild = allProfiles?.find(profile => {
-        const generatedShortCode = profile.id.replace(/\D/g, "").slice(0, 6);
-        return generatedShortCode === cleanCode;
-      });
 
       if (!targetChild) {
         throw new Error("Invalid setup code! Double check the numbers on the child's screen.");
@@ -136,8 +148,12 @@ function ParentDashboard() {
       if (targetChild.id === parentUser.id) {
         throw new Error("You cannot link a parent account to itself!");
       }
+      
+      if (targetChild.role !== 'child') {
+        throw new Error("Target account setup profile code is not flagged as a child device.");
+      }
 
-      // 3. Populate database mapping association to resolve connection loop
+      // 3. Write record into links table (Allowed by your fixed RLS policies!)
       const { error: insertError } = await supabase
         .from('parent_child_links')
         .insert([
@@ -157,9 +173,11 @@ function ParentDashboard() {
       toast.success("Child account linked successfully! 🚀");
       setShowPairingModal(false);
       setInputPairingCode("");
-      fetchInitialData(); // Reload list state to refresh the visible child pills
+      
+      // Refresh local states immediately so the new pill token shows up in the UI
+      await fetchInitialData();
     } catch (err: any) {
-      toast.error(`Linking failed: ${err.message || err}`);
+      toast.error(err.message || "An unexpected pairing tracing fault occurred.");
       console.error("Pairing trace fault details:", err);
     } finally {
       setIsSubmittingLink(false);
@@ -173,10 +191,11 @@ function ParentDashboard() {
   }, [selectedChild, activeTab, isUnlocked]);
 
   const fetchChildData = async () => {
+    // Note: Adjusted field filter from 'user_id' to 'child_id' to mirror child code layout structure
     const { data: shouts } = await supabase
       .from('shouts')
       .select('*')
-      .eq('user_id', selectedChild.id)
+      .eq('child_id', selectedChild.id)
       .order('created_at', { ascending: false });
 
     setChildShouts(shouts || []);
@@ -215,22 +234,31 @@ function ParentDashboard() {
   };
 
   const fetchStats = async () => {
-    const { count: sCount } = await supabase.from('shouts').select('*', { count: 'exact', head: true }).eq('user_id', selectedChild.id);
-    const { data: shouts } = await supabase.from('shouts').select('id').eq('user_id', selectedChild.id);
-    const sIds = shouts?.map(s => s.id) || [];
-    const { count: lCount } = await supabase.from('likes').select('*', { count: 'exact', head: true }).in('shout_id', sIds);
-    const { count: cCount } = await supabase.from('comments').select('*', { count: 'exact', head: true }).in('shout_id', sIds);
-    setStats({ totalShouts: sCount || 0, totalLikes: lCount || 0, totalComments: cCount || 0 });
+    const { count: sCount } = await supabase
+      .from('shouts')
+      .select('*', { count: 'exact', head: true })
+      .eq('child_id', selectedChild.id);
+      
+    setStats({ totalShouts: sCount || 0, totalLikes: 0, totalComments: 0 });
   };
 
   const triggerTimeOut = async (minutes: number) => {
     if (!selectedChild) return toast.error("Select a child first");
     setIsTimingOut(true);
-    const lockoutTime = new Date();
-    lockoutTime.setMinutes(lockoutTime.getMinutes() + minutes);
-    const { error } = await supabase.from('profiles').update({ lockout_until: minutes > 0 ? lockoutTime.toISOString() : null }).eq('id', selectedChild.id);
+    
+    // Set a true/false evaluation or timestamp for the profile table's 'paused' state field
+    const isPausedFlag = minutes > 0;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update({ paused: isPausedFlag })
+      .eq('id', selectedChild.id);
+      
     if (!error) {
-      toast[minutes > 0 ? 'error' : 'success'](minutes > 0 ? `LOCKOUT ACTIVE` : "Access Restored");
+      toast[isPausedFlag ? 'error' : 'success'](isPausedFlag ? `LOCKOUT ACTIVE` : "Access Restored");
+      fetchInitialData();
+    } else {
+      toast.error("Failed to update status.");
     }
     setIsTimingOut(false);
   };
@@ -304,7 +332,7 @@ function ParentDashboard() {
               selectedChild?.id === child.id ? 'bg-emerald-500 border-emerald-500 text-black' : 'bg-white/5 border-white/10 text-white/60'
             }`}
           >
-            <img src={child.avatar_url} className="w-5 h-5 rounded-full" />
+            {child.avatar_url && <img src={child.avatar_url} className="w-5 h-5 rounded-full" />}
             <span className="text-[10px] font-black uppercase tracking-tighter">@{child.username}</span>
           </button>
         ))}
@@ -364,6 +392,7 @@ function ParentDashboard() {
             {activeTab === 'queue' && (
               <div className="space-y-4">
                 <p className="text-[10px] font-black uppercase text-emerald-500/50 px-2 tracking-widest">Reviewing Shouts: @{selectedChild.username}</p>
+                {childShouts.length === 0 && <p className="text-center py-8 text-xs text-white/40 uppercase font-bold tracking-wider">No shouts from this user yet.</p>}
                 {childShouts.map((shout) => (
                   <div key={shout.id} className="bg-white/5 rounded-[2rem] overflow-hidden border border-white/5 flex h-32 relative">
                     <video src={shout.video_url} className={`w-24 object-cover bg-black ${!shout.is_approved ? 'opacity-30' : 'opacity-80'}`} />
@@ -373,7 +402,7 @@ function ParentDashboard() {
                       </div>
                     )}
                     <div className="flex-1 p-4 flex flex-col justify-between">
-                      <p className="text-xs text-white/80 font-medium italic truncate">"{shout.caption}"</p>
+                      <p className="text-xs text-white/80 font-medium italic truncate">"{shout.caption || shout.title}"</p>
                       <div className="flex gap-2">
                         {!shout.is_approved ? (
                           <button onClick={() => approveShout(shout.id)} className="flex-1 bg-emerald-500 text-black py-2 rounded-xl text-[9px] font-black uppercase flex items-center justify-center gap-1"><CheckCircle2 size={12} /> Approve</button>
@@ -391,10 +420,11 @@ function ParentDashboard() {
             {activeTab === 'social' && (
               <section className="space-y-3">
                 <h3 className="text-[10px] font-black uppercase text-emerald-500 tracking-widest px-2">Following ({followingList.length})</h3>
+                {followingList.length === 0 && <p className="text-center py-8 text-xs text-white/40 uppercase font-bold tracking-wider">Not following anyone yet.</p>}
                 {followingList.map((item, i) => (
                   <div key={i} className="bg-white/5 p-4 rounded-2xl flex items-center justify-between border border-white/5">
                     <div className="flex items-center gap-3">
-                      <img src={item.profiles?.avatar_url} className="w-10 h-10 rounded-full border border-white/10" />
+                      {item.profiles?.avatar_url && <img src={item.profiles?.avatar_url} className="w-10 h-10 rounded-full border border-white/10" />}
                       <p className="font-bold text-sm">@{item.profiles?.username}</p>
                     </div>
                     <button className="text-red-500 text-[9px] font-black uppercase bg-red-500/10 px-4 py-2 rounded-xl">Block</button>
@@ -425,10 +455,10 @@ function ParentDashboard() {
                   <h3 className="font-black italic uppercase text-sm text-red-500">Instant Time Out</h3>
                 </div>
                 <div className="flex gap-3 mb-4">
-                  <input type="number" value={customMinutes} onChange={(e) => setCustomMinutes(Number(e.target.value))} className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none font-black italic text-xl text-center" />
-                  <button onClick={() => triggerTimeOut(customMinutes)} className="bg-red-600 text-white px-8 rounded-2xl font-black italic uppercase text-[10px]">Lock</button>
+                  <input type="number" value={customMinutes} onChange={(e) => setCustomMinutes(Number(e.target.value))} className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-4 outline-none font-black italic text-xl text-center text-white" />
+                  <button onClick={() => triggerTimeOut(customMinutes)} disabled={isTimingOut} className="bg-red-600 hover:bg-red-500 text-white px-8 rounded-2xl font-black italic uppercase text-[10px] transition-all">Lock</button>
                 </div>
-                <button onClick={() => triggerTimeOut(0)} className="w-full bg-white/5 border border-white/10 py-3 rounded-xl font-black italic uppercase text-[9px]">Restore Access</button>
+                <button onClick={() => triggerTimeOut(0)} disabled={isTimingOut} className="w-full bg-white/5 border border-white/10 py-3 rounded-xl font-black italic uppercase text-[9px] text-white/80 hover:text-white transition-all">Restore Access</button>
               </section>
             )}
           </div>

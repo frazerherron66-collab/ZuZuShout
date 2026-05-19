@@ -34,10 +34,17 @@ function ChildView() {
   const [isPaired, setIsPaired] = useState(false);
   const [checkingPairing, setCheckingPairing] = useState(true);
 
-  // 1. Auth and Role Routing Gates
+  // 1. Auth and Role Routing Gates (Fixed: Adjusted execution order so logouts trigger correctly)
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth", search: { role: "child" } });
-    if (profile && profile.role !== "child") navigate({ to: "/parent" });
+    if (loading) return;
+    
+    if (!user) {
+      navigate({ to: "/auth", search: { role: "child" } });
+      return;
+    }
+    if (profile && profile.role !== "child") {
+      navigate({ to: "/parent" });
+    }
   }, [user, profile, loading, navigate]);
 
   // 2. Initial Pairing Status Lookup & Realtime Subscription Loop
@@ -54,7 +61,7 @@ function ChildView() {
 
         if (error) throw error;
 
-        if (data && typeof data.parent_id === "string" && data.parent_id.trim() !== "") {
+        if (data?.parent_id && data.parent_id.trim() !== "") {
           setIsPaired(true);
         } else {
           setIsPaired(false);
@@ -67,16 +74,14 @@ function ChildView() {
       }
     };
 
-    // Run the initial check
     verifyPairingStatus();
 
-    // Set up Realtime listener to watch if a link is added or broken live
     const pairingChannel = supabase
       .channel(`pairing-${user.id}`)
       .on(
         "postgres_changes",
         {
-          event: "*", // Listen to INSERT or DELETE changes
+          event: "*",
           schema: "public",
           table: "parent_child_links",
           filter: `child_id=eq.${user.id}`,
@@ -159,7 +164,8 @@ function ChildView() {
     setSearch("");
   };
 
-  if (loading || checkingPairing || !profile) {
+  // Fixed Gate Check: Allows unauthenticated states to pass cleanly to the auth redirect loop
+  if (loading || (user && !profile) || (user && checkingPairing)) {
     return (
       <div className="min-h-screen grid place-items-center bg-black text-white font-black uppercase text-[10px] tracking-widest">
         Loading Safe Space…
@@ -167,8 +173,11 @@ function ChildView() {
     );
   }
 
+  // Fallback rendering safeguard if user is being redirected to auth page
+  if (!user || !profile) return null;
+
   return (
-    <div className="min-h-screen pb-12">
+    <div className="min-h-screen pb-12 relative bg-background text-foreground">
       {/* FLOATING SYSTEM LOG DEBUGGER */}
       <div className="bg-yellow-500 text-black p-2 text-xs font-mono fixed bottom-2 left-2 z-50 rounded shadow-md border border-black/20">
         Paired: {isPaired ? "TRUE" : "FALSE"} | Paused: {paused ? "TRUE" : "FALSE"} | Loading: {loading ? "TRUE" : "FALSE"}
@@ -202,7 +211,7 @@ function ChildView() {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search shouts…"
                 maxLength={100}
-                className="w-full rounded-full border-2 border-input bg-white pl-12 pr-4 py-2.5 font-medium focus:outline-none focus:border-primary" />
+                className="w-full rounded-full border-2 border-input bg-white pl-12 pr-4 py-2.5 font-medium text-black focus:outline-none focus:border-primary" />
             </div>
           </form>
         </div>
@@ -211,9 +220,10 @@ function ChildView() {
           {CATS.map((c) => (
             <button key={c.id} onClick={() => setCat(c.id)}
               className={`shrink-0 rounded-full px-4 py-2 font-bold text-sm transition ${
-                cat === c.id ? "btn-primary shadow-md" : "bg-secondary text-secondary-foreground"
+                cat === c.id 
+                  ? "bg-primary text-primary-foreground shadow-md" 
+                  : "bg-secondary text-secondary-foreground"
               }`}
-              style={cat === c.id ? { background: "var(--primary)", color: "var(--primary-foreground)" } : {}}
             >
               <span className="mr-1">{c.emoji}</span>{c.label}
             </button>
@@ -228,7 +238,7 @@ function ChildView() {
         ))}
       </main>
 
-      {/* Screen lock overlay triggered instantly by either state change */}
+      {/* Full screen system lock overlay triggered instantly by state updates */}
       {(paused || !isPaired) && (
         <PauseOverlay reason={!isPaired ? "unlinked" : "paused"} />
       )}
@@ -277,22 +287,22 @@ function VideoCard({ video, shouted, onShout, onReport }: { video: Video; shoute
 
 function PauseOverlay({ reason }: { reason: "paused" | "unlinked" }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center p-6" style={{ background: "oklch(0.18 0.05 295 / 0.95)" }}>
-      <div className="card-bubbly text-center max-w-md w-full" style={{ background: "var(--accent)" }}>
+    <div className="fixed inset-0 z-50 grid place-items-center p-6 bg-black/95 backdrop-blur-sm">
+      <div className="card-bubbly text-center max-w-md w-full p-8 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] bg-amber-400 text-black">
         {reason === "unlinked" ? (
           <>
-            <div className="text-7xl mb-4">🔒</div>
-            <h2 className="text-4xl font-extrabold mb-2">Device Locked</h2>
-            <p className="text-lg font-medium mb-6">Ask a grown-up to link this app profile using their parent dashboard setup code! 👪</p>
-            <Link to="/link" className="btn-bubbly btn-primary inline-block w-full text-center">
+            <div className="text-7xl mb-4 animate-bounce">🔒</div>
+            <h2 className="text-4xl font-black uppercase tracking-tight mb-2">Device Locked</h2>
+            <p className="text-base font-bold mb-6 text-neutral-800">Ask a grown-up to link this app profile using their parent dashboard setup code! 👪</p>
+            <Link to="/link" className="btn-bubbly btn-primary block w-full text-center py-3 font-black uppercase tracking-wider text-sm">
               Enter Pairing Code
             </Link>
           </>
         ) : (
           <>
-            <div className="text-7xl mb-4">⏸️</div>
-            <h2 className="text-4xl font-extrabold mb-2">Time for a Break!</h2>
-            <p className="text-lg font-medium">A grown-up has paused ShoutTube. Take a stretch! 🌿</p>
+            <div className="text-7xl mb-4 animate-pulse">⏸️</div>
+            <h2 className="text-4xl font-black uppercase tracking-tight mb-2">Time for a Break!</h2>
+            <p className="text-base font-bold text-neutral-800">A grown-up has paused ZuZuShout. Go outside and explore! 🌿</p>
           </>
         )}
       </div>
