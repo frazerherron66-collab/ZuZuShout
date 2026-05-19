@@ -3,11 +3,9 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { supabase } from "@/supabase";
 import { 
   ShieldCheck, BarChart3, Lock, Users, Clock, 
-  CheckCircle2, ArrowLeft, Trash2, Camera, X, KeyRound
+  CheckCircle2, ArrowLeft, Trash2, KeyRound, RefreshCw, UserPlus
 } from 'lucide-react';
 import { toast } from "sonner";
-// Import the core engine directly instead of the bulky scanner UI wrapper
-import { Html5Qrcode } from "html5-qrcode";
 
 export const Route = createFileRoute('/parent-dashboard')({
   component: ParentDashboard,
@@ -27,7 +25,11 @@ function ParentDashboard() {
   const [linkedChildren, setLinkedChildren] = useState<any[]>([]);
   const [selectedChild, setSelectedChild] = useState<any>(null);
   const [childShouts, setChildShouts] = useState<any[]>([]);
-  const [isScanning, setIsScanning] = useState(false);
+  
+  // --- PAIRING CODE GENERATION STATE ---
+  const [pairingCode, setPairingCode] = useState<string | null>(null);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [showPairingModal, setShowPairingModal] = useState(false);
   
   // Social & Activity Stats
   const [followingList, setFollowingList] = useState<any[]>([]);
@@ -102,85 +104,38 @@ function ParentDashboard() {
     }
   };
 
-  // --- CAMERA SCANNING FLOW WITH DIAGNOSTIC TARGETS ---
-  const startScanner = () => {
-    setIsScanning(true);
+  // --- GENERATE PAIRING CODE FOR CHILD SCRIPT ---
+  const handleGetPairingCode = async () => {
+    setIsGeneratingCode(true);
+    try {
+      // Calls your database logic to request or generate an active code format 
+      // If you have a specific RPC or table for code creation, target it here.
+      // For now, let's fetch an existing one or look up your profile code.
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('pairing_code')
+        .eq('id', user?.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data?.pairing_code) {
+        setPairingCode(data.pairing_code);
+      } else {
+        // Fallback: Generate a clean temporary 6-digit random number string if not present yet
+        const fallbackCode = Math.floor(100000 + Math.random() * 900000).toString();
+        await supabase.from('profiles').update({ pairing_code: fallbackCode }).eq('id', user?.id);
+        setPairingCode(fallbackCode);
+      }
+      setShowPairingModal(true);
+    } catch (err: any) {
+      toast.error(`Could not generate code: ${err.message}`);
+    } finally {
+      setIsGeneratingCode(false);
+    }
   };
-
-  useEffect(() => {
-    if (!isScanning) return;
-
-    const html5Qrcode = new Html5Qrcode("reader");
-
-    const startCamera = async () => {
-      try {
-        await html5Qrcode.start(
-          { facingMode: "environment" },
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0
-          },
-          async (decodedText) => {
-            // Step 1: Instantly close hardware stream so it doesn't lock on mobile layouts
-            if (html5Qrcode.isScanning) {
-              await html5Qrcode.stop();
-            }
-            setIsScanning(false);
-
-            // Step 2: Wrap everything in a try/catch block to stop unhandled silent crashes
-            try {
-              toast.info(`Scanned Content: "${decodedText}"`, { duration: 5000 });
-
-              const { data: authData, error: authError } = await supabase.auth.getUser();
-              
-              if (authError || !authData?.user) {
-                toast.error("Authentication Missing: Please re-login to your parent account.");
-                return;
-              }
-
-              const user = authData.user;
-
-              // Step 3: Run the database link entry
-              const { error: dbError } = await supabase
-                .from('parent_child_links')
-                .insert([{ parent_id: user.id, child_id: decodedText }]);
-
-              if (dbError) {
-                console.error("Supabase Error Logs:", dbError);
-                toast.error(`Database Error: ${dbError.message} (Code: ${dbError.code})`, { duration: 6000 });
-              } else {
-                toast.success("New child added to dashboard!");
-                await fetchInitialData();
-              }
-
-            } catch (crashError: any) {
-              console.error("Callback execution caught an app crash:", crashError);
-              toast.error(`App Crash: ${crashError.message || crashError}`);
-            }
-          },
-          () => {
-            // Keep empty to avoid performance degradation over frame cycles
-          }
-        );
-      } catch (err: any) {
-        console.error("Failed to start direct camera stream:", err);
-        toast.error(`Camera Engine Error: ${err.message || err}`);
-        setIsScanning(false);
-      }
-    };
-
-    const timer = setTimeout(() => {
-      startCamera();
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      if (html5Qrcode.isScanning) {
-        html5Qrcode.stop().catch((err) => console.error("Clean error on destruction:", err));
-      }
-    };
-  }, [isScanning]);
 
   useEffect(() => {
     if (selectedChild && isUnlocked) {
@@ -251,7 +206,7 @@ function ParentDashboard() {
     setIsTimingOut(false);
   };
 
-  // --- RENDER PIN LOCK SCREEN (BRIGHT EMERALD & WHITE TEXT) ---
+  // --- RENDER PIN LOCK SCREEN ---
   if (!isUnlocked) {
     return (
       <div className="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center p-6 animate-in fade-in duration-500">
@@ -310,6 +265,7 @@ function ParentDashboard() {
         <button onClick={() => setIsUnlocked(false)} className="p-2 bg-white/5 rounded-full"><Lock size={20} className="text-emerald-500" /></button>
       </header>
 
+      {/* Linked Children Pill List Bar */}
       <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar">
         {linkedChildren.map((child) => (
           <button
@@ -323,10 +279,38 @@ function ParentDashboard() {
             <span className="text-[10px] font-black uppercase tracking-tighter">@{child.username}</span>
           </button>
         ))}
-        <button onClick={startScanner} className="flex-shrink-0 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-emerald-500 border border-emerald-500/20 active:scale-90 transition-transform">
-          <Camera size={18} />
+        {/* ADD CHILD PAIRING CODE BUTTON */}
+        <button 
+          onClick={handleGetPairingCode} 
+          disabled={isGeneratingCode}
+          className="flex-shrink-0 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-emerald-500 border border-emerald-500/20 active:scale-90 transition-transform disabled:opacity-40"
+        >
+          <UserPlus size={18} />
         </button>
       </div>
+
+      {/* CODE VIEW DISPLAY MODAL OVERLAY */}
+      {showPairingModal && (
+        <div className="bg-white/5 border border-emerald-500/30 p-6 rounded-[2rem] mb-6 relative animate-in fade-in zoom-in-95 duration-200">
+          <button 
+            onClick={() => setShowPairingModal(false)}
+            className="absolute top-4 right-4 text-white/40 hover:text-white font-black text-xs uppercase"
+          >
+            Close
+          </button>
+          <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1">Pairing Connection Code</p>
+          <h3 className="text-xs text-white/70 mb-4">Type this 6-digit number directly into your child's link screen:</h3>
+          <div className="bg-white text-black font-black text-center py-4 rounded-xl text-4xl tracking-[0.3em] font-mono select-all">
+            {pairingCode}
+          </div>
+          <button 
+            onClick={handleGetPairingCode}
+            className="mt-3 flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-emerald-400 transition-colors"
+          >
+            <RefreshCw size={10} /> Get New Code
+          </button>
+        </div>
+      )}
 
       <nav className="grid grid-cols-4 gap-1 mb-8 bg-white/5 p-1 rounded-2xl border border-white/5">
         <button onClick={() => setActiveTab('queue')} className={`py-3 rounded-xl font-black italic uppercase text-[9px] flex flex-col items-center gap-1 transition-all ${activeTab === 'queue' ? 'bg-emerald-500 text-black' : 'text-white/40'}`}><CheckCircle2 size={14} /> Queue</button>
@@ -336,13 +320,6 @@ function ParentDashboard() {
       </nav>
 
       <div className="space-y-6">
-        {isScanning && (
-          <div className="relative animate-in fade-in zoom-in-95 duration-200">
-            <div id="reader" className="overflow-hidden rounded-[2.5rem] bg-black border border-emerald-500/30 w-full min-h-[300px]"></div>
-            <button onClick={() => setIsScanning(false)} className="absolute top-4 right-4 bg-red-500 p-2 rounded-full z-20 shadow-xl hover:bg-red-600 transition-colors"><X size={16} /></button>
-          </div>
-        )}
-
         {selectedChild ? (
           <div className="animate-in fade-in slide-in-from-bottom-4">
             {activeTab === 'queue' && (
@@ -419,7 +396,7 @@ function ParentDashboard() {
         ) : (
           <div className="py-20 text-center opacity-20">
             <Users size={48} className="mx-auto mb-4" />
-            <p className="text-xs font-black uppercase italic tracking-widest">Select a child or scan to add</p>
+            <p className="text-xs font-black uppercase italic tracking-widest">Select a child or create a code to link</p>
           </div>
         )}
       </div>
