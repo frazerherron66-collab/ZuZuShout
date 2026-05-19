@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { supabase } from "@/supabase";
-import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "../supabase"; // 🚀 FIXED: Using relative path matching your project structure
+import { useAuth } from "../hooks/useAuth"; // 🚀 FIXED: Using relative path matching your project structure
 import { toast } from "sonner";
 import { ShieldAlert, Loader2 } from "lucide-react";
 
@@ -18,12 +18,10 @@ function LinkParent() {
     if (!user) return;
 
     // 1. Convert the first part of their UUID into a clean 6-digit string or use user.id
-    // For simplicity with your database rpc, we'll slice a clean 6-character chunk
     const shortCode = user.id.replace(/\D/g, "").slice(0, 6) || "529831";
     setDisplayCode(shortCode);
 
     // 2. Set up a real-time listener on 'parent_child_links' table
-    // The second the parent inputs this code and a link row is created, the child screen unlocks!
     const channel = supabase
       .channel("child-pairing-lock")
       .on(
