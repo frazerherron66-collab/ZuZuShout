@@ -54,13 +54,15 @@ function ChildView() {
 
         if (error) throw error;
 
-        if (!data) {
-          setIsPaired(false);
-        } else {
+        // Strict Check: Confirm record exists AND contains a non-empty parent UUID string
+        if (data && typeof data.parent_id === "string" && data.parent_id.trim() !== "") {
           setIsPaired(true);
+        } else {
+          setIsPaired(false);
         }
       } catch (err) {
         console.error("Pairing lookup failure:", err);
+        setIsPaired(false); // Default lock state on system lookup failures
       } finally {
         setCheckingPairing(false);
       }
@@ -140,6 +142,11 @@ function ChildView() {
 
   return (
     <div className="min-h-screen pb-12">
+      {/* FLOATING SYSTEM LOG DEBUGGER - REMOVE ONCE VERIFIED */}
+      <div className="bg-yellow-500 text-black p-2 text-xs font-mono fixed bottom-2 left-2 z-50 rounded shadow-md border border-black/20">
+        Paired: {isPaired ? "TRUE" : "FALSE"} | Paused: {paused ? "TRUE" : "FALSE"} | Loading: {loading ? "TRUE" : "FALSE"}
+      </div>
+
       <header className="sticky top-0 z-30 backdrop-blur bg-background/80 border-b-2 border-border">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-3">
           <AvatarMask template={profile.avatar} size={44} />
@@ -194,7 +201,8 @@ function ChildView() {
         ))}
       </main>
 
-      {(paused || !isPaired) && (
+      {/* Screen lock strictly evaluates both pause state and explicit unpaired condition */}
+      {(paused || isPaired === false) && (
         <PauseOverlay reason={!isPaired ? "unlinked" : "paused"} />
       )}
     </div>
