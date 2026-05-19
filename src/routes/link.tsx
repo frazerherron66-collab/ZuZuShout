@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { supabase } from "../supabase"; // 🚀 FIXED: Using relative path matching your project structure
-import { useAuth } from "../hooks/useAuth"; // 🚀 FIXED: Using relative path matching your project structure
+import { supabase } from "../supabase"; 
 import { toast } from "sonner";
 import { ShieldAlert, Loader2 } from "lucide-react";
 
@@ -10,18 +9,33 @@ export const Route = createFileRoute("/link")({
 });
 
 function LinkParent() {
-  const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const [userId, setUserId] = useState<string | null>(null);
   const [displayCode, setDisplayCode] = useState<string>("");
 
   useEffect(() => {
-    if (!user) return;
+    // Fetch the active session directly from the Supabase client instance
+    const getUserSession = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+        
+        // Convert the first part of their UUID into a clean 6-digit layout code
+        const shortCode = user.id.replace(/\D/g, "").slice(0, 6) || "529831";
+        setDisplayCode(shortCode);
+      } else {
+        // Fallback safety: If someone lands here completely unauthenticated, kick them back to login
+        navigate({ to: "/auth", search: { role: "child" } });
+      }
+    };
 
-    // 1. Convert the first part of their UUID into a clean 6-digit string or use user.id
-    const shortCode = user.id.replace(/\D/g, "").slice(0, 6) || "529831";
-    setDisplayCode(shortCode);
+    getUserSession();
+  }, [navigate]);
 
-    // 2. Set up a real-time listener on 'parent_child_links' table
+  useEffect(() => {
+    if (!userId) return;
+
+    // Set up our real-time listener using our component's local state ID
     const channel = supabase
       .channel("child-pairing-lock")
       .on(
@@ -30,11 +44,10 @@ function LinkParent() {
           event: "INSERT",
           schema: "public",
           table: "parent_child_links",
-          filter: `child_id=eq.${user.id}`,
+          filter: `child_id=eq.${userId}`,
         },
         async () => {
           toast.success("Device Paired by Grown-up! 🎉");
-          await refreshProfile();
           navigate({ to: "/child" });
         }
       )
@@ -43,7 +56,7 @@ function LinkParent() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [userId, navigate]);
 
   return (
     <div className="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center p-6 font-sans">
@@ -65,7 +78,7 @@ function LinkParent() {
           Give this setup code to your grown-up. They need to enter it on their dashboard to activate your account!
         </p>
 
-        {/* Big clean copyable display box for the kid to show the parent */}
+        {/* Big clean display box for the kid to show the parent */}
         <div className="bg-white text-black font-black text-center py-6 rounded-2xl text-5xl tracking-[0.4em] font-mono shadow-[0_15px_30px_rgba(255,255,255,0.05)] select-all mb-8">
           {displayCode || <Loader2 className="animate-spin mx-auto text-black" size={32} />}
         </div>
