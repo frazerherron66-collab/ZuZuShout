@@ -1,5 +1,5 @@
 {
-  "name": "ShoutTube — Safe video for kids",
+  "name": "ZuZuShout — Safe video for kids",
   "short_name": "ShoutTube",
   "description": "Animated avatars, no comments, real-time parent peace of mind.",
   "start_url": "/",
@@ -9,7 +9,17 @@
   "background_color": "#F7F2FB",
   "theme_color": "#6200EE",
   "icons": [
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
