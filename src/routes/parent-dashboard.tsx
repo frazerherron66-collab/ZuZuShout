@@ -6,7 +6,8 @@ import {
   CheckCircle2, ArrowLeft, Trash2, Camera, X, KeyRound
 } from 'lucide-react';
 import { toast } from "sonner";
-import { Html5QrcodeScanner } from "html5-qrcode";
+// Import the core engine directly instead of the bulky scanner UI wrapper
+import { Html5Qrcode } from "html5-qrcode";
 
 export const Route = createFileRoute('/parent-dashboard')({
   component: ParentDashboard,
@@ -109,46 +110,62 @@ function ParentDashboard() {
   useEffect(() => {
     if (!isScanning) return;
 
-    // Initialize scanner onto container once React finishes building it into the DOM
-    const scanner = new Html5QrcodeScanner(
-      "reader", 
-      { 
-        fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0 
-      }, 
-      /* verbose= */ false
-    );
+    // Instantiating core low-level device controller targeted on our custom reader view box
+    const html5Qrcode = new Html5Qrcode("reader");
 
-    scanner.render(
-      async (decodedText) => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+    const startCamera = async () => {
+      try {
+        await html5Qrcode.start(
+          // Forces iOS WebKit to pull the rear camera array and bypass internal hardware selection crashes
+          { facingMode: "environment" },
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0
+          },
+          async (decodedText) => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
 
-        const { error } = await supabase
-          .from('parent_child_links')
-          .insert([{ parent_id: user.id, child_id: decodedText }]);
+            const { error } = await supabase
+              .from('parent_child_links')
+              .insert([{ parent_id: user.id, child_id: decodedText }]);
 
-        if (error) {
-          if (error.code === '23505') toast.info("Child already linked!");
-          else toast.error("Could not link account.");
-        } else {
-          toast.success("New child added to dashboard!");
-          fetchInitialData();
-        }
-        
-        // Clear camera and wrap up scanner view state on successful parsing
-        scanner.clear().catch((err) => console.error("Scanner clear error:", err));
+            if (error) {
+              if (error.code === '23505') toast.info("Child already linked!");
+              else toast.error("Could not link account.");
+            } else {
+              toast.success("New child added to dashboard!");
+              fetchInitialData();
+            }
+            
+            // Shut off camera lens cleanly and drop scanner overlay state
+            if (html5Qrcode.isScanning) {
+              await html5Qrcode.stop();
+            }
+            setIsScanning(false);
+          },
+          () => {
+            // Keep empty to avoid console frame rendering log floods
+          }
+        );
+      } catch (err) {
+        console.error("Failed to start direct camera stream:", err);
+        toast.error("Camera blocked. Verify app permissions in iPhone Settings.");
         setIsScanning(false);
-      }, 
-      () => {
-        // Quietly consume ongoing seek frame errors to prevent console log spamming
       }
-    );
+    };
 
-    // Clean up hook to forcefully release the system webcam if the user exits via the "X" button
+    // Explicit 300ms layout painting break allows iOS graphics layers to completely construct the placeholder container before initialization
+    const timer = setTimeout(() => {
+      startCamera();
+    }, 300);
+
     return () => {
-      scanner.clear().catch((err) => console.error("Failed to clear scanner on destroy:", err));
+      clearTimeout(timer);
+      if (html5Qrcode.isScanning) {
+        html5Qrcode.stop().catch((err) => console.error("Clean error on destruction:", err));
+      }
     };
   }, [isScanning]);
 
@@ -308,7 +325,8 @@ function ParentDashboard() {
       <div className="space-y-6">
         {isScanning && (
           <div className="relative animate-in fade-in zoom-in-95 duration-200">
-            <div id="reader" className="overflow-hidden rounded-[2.5rem] bg-black border border-emerald-500/30"></div>
+            {/* Direct target container for internal HTML video tag mount */}
+            <div id="reader" className="overflow-hidden rounded-[2.5rem] bg-black border border-emerald-500/30 w-full min-h-[300px]"></div>
             <button onClick={() => setIsScanning(false)} className="absolute top-4 right-4 bg-red-500 p-2 rounded-full z-20 shadow-xl hover:bg-red-600 transition-colors"><X size={16} /></button>
           </div>
         )}
