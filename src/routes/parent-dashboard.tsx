@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { supabase } from "@/supabase";
 import { 
   ShieldCheck, BarChart3, Lock, Users, Clock, 
-  CheckCircle2, ArrowLeft, Eye, Trash2, Camera, X, KeyRound
+  CheckCircle2, ArrowLeft, Trash2, Camera, X, KeyRound
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Html5QrcodeScanner } from "html5-qrcode";
@@ -101,16 +101,27 @@ function ParentDashboard() {
     }
   };
 
+  // --- CAMERA SCANNING FLOW ---
   const startScanner = () => {
     setIsScanning(true);
-    setTimeout(() => {
-      const scanner = new Html5QrcodeScanner(
-        "reader", 
-        { fps: 10, qrbox: { width: 250, height: 250 } }, 
-        false
-      );
+  };
 
-      scanner.render(async (decodedText) => {
+  useEffect(() => {
+    if (!isScanning) return;
+
+    // Initialize scanner onto container once React finishes building it into the DOM
+    const scanner = new Html5QrcodeScanner(
+      "reader", 
+      { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0 
+      }, 
+      /* verbose= */ false
+    );
+
+    scanner.render(
+      async (decodedText) => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
@@ -125,11 +136,21 @@ function ParentDashboard() {
           toast.success("New child added to dashboard!");
           fetchInitialData();
         }
-        scanner.clear();
+        
+        // Clear camera and wrap up scanner view state on successful parsing
+        scanner.clear().catch((err) => console.error("Scanner clear error:", err));
         setIsScanning(false);
-      }, () => {});
-    }, 100);
-  };
+      }, 
+      () => {
+        // Quietly consume ongoing seek frame errors to prevent console log spamming
+      }
+    );
+
+    // Clean up hook to forcefully release the system webcam if the user exits via the "X" button
+    return () => {
+      scanner.clear().catch((err) => console.error("Failed to clear scanner on destroy:", err));
+    };
+  }, [isScanning]);
 
   useEffect(() => {
     if (selectedChild && isUnlocked) {
@@ -286,9 +307,9 @@ function ParentDashboard() {
 
       <div className="space-y-6">
         {isScanning && (
-          <div className="relative">
+          <div className="relative animate-in fade-in zoom-in-95 duration-200">
             <div id="reader" className="overflow-hidden rounded-[2.5rem] bg-black border border-emerald-500/30"></div>
-            <button onClick={() => setIsScanning(false)} className="absolute top-4 right-4 bg-red-500 p-2 rounded-full z-20 shadow-xl"><X size={16} /></button>
+            <button onClick={() => setIsScanning(false)} className="absolute top-4 right-4 bg-red-500 p-2 rounded-full z-20 shadow-xl hover:bg-red-600 transition-colors"><X size={16} /></button>
           </div>
         )}
 
