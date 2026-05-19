@@ -14,7 +14,6 @@ function LinkParent() {
   const [displayCode, setDisplayCode] = useState<string>("");
 
   useEffect(() => {
-    // Fetch the active session directly from the Supabase client instance
     const getUserSession = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -35,6 +34,8 @@ function LinkParent() {
   useEffect(() => {
     if (!userId) return;
 
+    console.log("Subscribing to live pairing checks for child:", userId);
+
     // Set up our real-time listener using our component's local state ID
     const channel = supabase
       .channel("child-pairing-lock")
@@ -46,12 +47,19 @@ function LinkParent() {
           table: "parent_child_links",
           filter: `child_id=eq.${userId}`,
         },
-        async () => {
+        (payload) => {
+          console.log("Realtime pairing event captured!", payload);
           toast.success("Device Paired by Grown-up! 🎉");
-          navigate({ to: "/child" });
+          
+          // Small operational delay to ensure smooth toast readability before route swap
+          setTimeout(() => {
+            navigate({ to: "/child" });
+          }, 1000);
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("Supabase Realtime Connection Status:", status);
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -78,9 +86,13 @@ function LinkParent() {
           Give this setup code to your grown-up. They need to enter it on their dashboard to activate your account!
         </p>
 
-        {/* Big clean display box for the kid to show the parent */}
-        <div className="bg-white text-black font-black text-center py-6 rounded-2xl text-5xl tracking-[0.4em] font-mono shadow-[0_15px_30px_rgba(255,255,255,0.05)] select-all mb-8">
-          {displayCode || <Loader2 className="animate-spin mx-auto text-black" size={32} />}
+        {/* Big clean display box for the kid to show the parent - digits split elegantly */}
+        <div className="bg-white text-black font-black text-center py-6 rounded-2xl text-4xl tracking-[0.2em] font-mono shadow-[0_15px_30px_rgba(255,255,255,0.05)] select-all mb-8 flex items-center justify-center min-h-[92px]">
+          {displayCode ? (
+            <span className="pl-[0.2em]">{displayCode.split("").join(" ")}</span>
+          ) : (
+            <Loader2 className="animate-spin text-zinc-600" size={32} />
+          )}
         </div>
 
         <div className="flex items-center justify-center gap-2 text-white/40 text-[10px] font-black uppercase tracking-widest">
