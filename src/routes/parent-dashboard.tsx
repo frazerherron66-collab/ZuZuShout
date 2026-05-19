@@ -107,7 +107,8 @@ function ParentDashboard() {
   // --- FIXED SUBMIT PAIRING CODE FROM CHILD SCREEN ---
   const handlePairChildSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (inputPairingCode.length !== 6) return toast.error("Please enter a valid 6-digit code");
+    const cleanCode = inputPairingCode.replace(/\s/g, "");
+    if (cleanCode.length !== 6) return toast.error("Please enter a valid 6-digit code");
     
     setIsSubmittingLink(true);
     try {
@@ -115,16 +116,17 @@ function ParentDashboard() {
       const { data: { user: parentUser } } = await supabase.auth.getUser();
       if (!parentUser) throw new Error("Parent session not found. Please log in again.");
 
-      // 2. Query child base profiles to translate short code back into a valid full UUID string
+      // 2. Pull all profiles to accurately find the matched child token
       const { data: allProfiles, error: profileError } = await supabase
         .from('profiles')
         .select('id');
 
       if (profileError) throw profileError;
 
+      // Cleanly matches the same string truncation algorithm used in link.tsx
       const targetChild = allProfiles?.find(profile => {
         const generatedShortCode = profile.id.replace(/\D/g, "").slice(0, 6);
-        return generatedShortCode === inputPairingCode.trim();
+        return generatedShortCode === cleanCode;
       });
 
       if (!targetChild) {
@@ -307,7 +309,7 @@ function ParentDashboard() {
           </button>
         ))}
         
-        {/* LINK A CHILD INTERACTIVE ACTION ACTION BUTTON */}
+        {/* LINK A CHILD INTERACTIVE ACTION BUTTON */}
         <button 
           onClick={() => setShowPairingModal(true)} 
           className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-full transition-all active:scale-95"
@@ -340,7 +342,7 @@ function ParentDashboard() {
             />
             <button 
               type="submit"
-              disabled={isSubmittingLink || inputPairingCode.length !== 6}
+              disabled={isSubmittingLink || inputPairingCode.replace(/\s/g, "").length !== 6}
               className="w-full bg-emerald-400 hover:bg-emerald-300 text-black py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-40"
             >
               {isSubmittingLink ? "Pairing Account..." : "Confirm Pair Link"}
