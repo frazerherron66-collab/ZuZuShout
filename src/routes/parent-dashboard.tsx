@@ -3,7 +3,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { supabase } from "@/supabase";
 import { 
   ShieldCheck, BarChart3, Lock, Users, Clock, 
-  CheckCircle2, ArrowLeft, Trash2, KeyRound, RefreshCw, UserPlus
+  CheckCircle2, ArrowLeft, Trash2, KeyRound, UserPlus, X
 } from 'lucide-react';
 import { toast } from "sonner";
 
@@ -26,9 +26,9 @@ function ParentDashboard() {
   const [selectedChild, setSelectedChild] = useState<any>(null);
   const [childShouts, setChildShouts] = useState<any[]>([]);
   
-  // --- PAIRING CODE GENERATION STATE ---
-  const [pairingCode, setPairingCode] = useState<string | null>(null);
-  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  // --- PAIRING CODE INPUT STATE ---
+  const [inputPairingCode, setInputPairingCode] = useState("");
+  const [isSubmittingLink, setIsSubmittingLink] = useState(false);
   const [showPairingModal, setShowPairingModal] = useState(false);
   
   // Social & Activity Stats
@@ -104,36 +104,28 @@ function ParentDashboard() {
     }
   };
 
-  // --- GENERATE PAIRING CODE FOR CHILD SCRIPT ---
-  const handleGetPairingCode = async () => {
-    setIsGeneratingCode(true);
+  // --- SUBMIT PAIRING CODE FROM CHILD SCREEN ---
+  const handlePairChildSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inputPairingCode.length !== 6) return toast.error("Please enter a valid 6-digit code");
+    
+    setIsSubmittingLink(true);
     try {
-      // Calls your database logic to request or generate an active code format 
-      // If you have a specific RPC or table for code creation, target it here.
-      // For now, let's fetch an existing one or look up your profile code.
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('pairing_code')
-        .eq('id', user?.id)
-        .single();
+      // Execute your specific backend connection function setup
+      const { error } = await supabase.rpc("redeem_pairing_code", { 
+        _code: inputPairingCode.trim() 
+      });
 
       if (error) throw error;
 
-      if (data?.pairing_code) {
-        setPairingCode(data.pairing_code);
-      } else {
-        // Fallback: Generate a clean temporary 6-digit random number string if not present yet
-        const fallbackCode = Math.floor(100000 + Math.random() * 900000).toString();
-        await supabase.from('profiles').update({ pairing_code: fallbackCode }).eq('id', user?.id);
-        setPairingCode(fallbackCode);
-      }
-      setShowPairingModal(true);
+      toast.success("Child account linked successfully! 🚀");
+      setShowPairingModal(false);
+      setInputPairingCode("");
+      fetchInitialData(); // Refresh list to show newly paired child avatar pill
     } catch (err: any) {
-      toast.error(`Could not generate code: ${err.message}`);
+      toast.error(`Linking failed: ${err.message}`);
     } finally {
-      setIsGeneratingCode(false);
+      setIsSubmittingLink(false);
     }
   };
 
@@ -266,12 +258,12 @@ function ParentDashboard() {
       </header>
 
       {/* Linked Children Pill List Bar */}
-      <div className="flex gap-3 overflow-x-auto pb-6 no-scrollbar">
+      <div className="flex items-center gap-3 overflow-x-auto pb-6 no-scrollbar flex-wrap sm:flex-nowrap">
         {linkedChildren.map((child) => (
           <button
             key={child.id}
             onClick={() => setSelectedChild(child)}
-            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-full border transition-all ${
+            className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all active:scale-95 ${
               selectedChild?.id === child.id ? 'bg-emerald-500 border-emerald-500 text-black' : 'bg-white/5 border-white/10 text-white/60'
             }`}
           >
@@ -279,36 +271,46 @@ function ParentDashboard() {
             <span className="text-[10px] font-black uppercase tracking-tighter">@{child.username}</span>
           </button>
         ))}
-        {/* ADD CHILD PAIRING CODE BUTTON */}
+        
+        {/* LINK A CHILD INTERACTIVE ACTION ACTION BUTTON */}
         <button 
-          onClick={handleGetPairingCode} 
-          disabled={isGeneratingCode}
-          className="flex-shrink-0 w-10 h-10 bg-white/10 rounded-full flex items-center justify-center text-emerald-500 border border-emerald-500/20 active:scale-90 transition-transform disabled:opacity-40"
+          onClick={() => setShowPairingModal(true)} 
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-full transition-all active:scale-95"
         >
-          <UserPlus size={18} />
+          <UserPlus size={14} />
+          <span className="text-[10px] font-black uppercase tracking-widest">Link a Child</span>
         </button>
       </div>
 
-      {/* CODE VIEW DISPLAY MODAL OVERLAY */}
+      {/* PARENTAL INPUT PAIRING CODE MODAL OVERLAY */}
       {showPairingModal && (
         <div className="bg-white/5 border border-emerald-500/30 p-6 rounded-[2rem] mb-6 relative animate-in fade-in zoom-in-95 duration-200">
           <button 
             onClick={() => setShowPairingModal(false)}
-            className="absolute top-4 right-4 text-white/40 hover:text-white font-black text-xs uppercase"
+            className="absolute top-4 right-4 text-white/40 hover:text-white"
           >
-            Close
+            <X size={18} />
           </button>
-          <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1">Pairing Connection Code</p>
-          <h3 className="text-xs text-white/70 mb-4">Type this 6-digit number directly into your child's link screen:</h3>
-          <div className="bg-white text-black font-black text-center py-4 rounded-xl text-4xl tracking-[0.3em] font-mono select-all">
-            {pairingCode}
-          </div>
-          <button 
-            onClick={handleGetPairingCode}
-            className="mt-3 flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-white/40 hover:text-emerald-400 transition-colors"
-          >
-            <RefreshCw size={10} /> Get New Code
-          </button>
+          <p className="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-1">Pair New Device</p>
+          <h3 className="text-xs text-white/70 mb-4">Enter the 6-digit lock code displayed on your child's screen:</h3>
+          
+          <form onSubmit={handlePairChildSubmit} className="space-y-4">
+            <input 
+              value={inputPairingCode}
+              onChange={(e) => setInputPairingCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder="000000"
+              maxLength={6}
+              inputMode="numeric"
+              className="w-full bg-black border-2 border-emerald-500/30 rounded-xl py-3 text-center text-3xl font-bold tracking-[0.4em] text-emerald-400 outline-none focus:border-emerald-400"
+            />
+            <button 
+              type="submit"
+              disabled={isSubmittingLink || inputPairingCode.length !== 6}
+              className="w-full bg-emerald-400 hover:bg-emerald-300 text-black py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all disabled:opacity-40"
+            >
+              {isSubmittingLink ? "Pairing Account..." : "Confirm Pair Link"}
+            </button>
+          </form>
         </div>
       )}
 

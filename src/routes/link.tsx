@@ -1,8 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { ShieldAlert, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/link")({
   component: LinkParent,
@@ -11,43 +12,70 @@ export const Route = createFileRoute("/link")({
 function LinkParent() {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  const [code, setCode] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [displayCode, setDisplayCode] = useState<string>("");
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
     if (!user) return;
-    setBusy(true);
-    const { error } = await supabase.rpc("redeem_pairing_code", { _code: code.trim() });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Linked! 🎉");
-    await refreshProfile();
-    navigate({ to: "/child" });
-  };
+
+    // 1. Convert the first part of their UUID into a clean 6-digit string or use user.id
+    // For simplicity with your database rpc, we'll slice a clean 6-character chunk
+    const shortCode = user.id.replace(/\D/g, "").slice(0, 6) || "529831";
+    setDisplayCode(shortCode);
+
+    // 2. Set up a real-time listener on 'parent_child_links' table
+    // The second the parent inputs this code and a link row is created, the child screen unlocks!
+    const channel = supabase
+      .channel("child-pairing-lock")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "parent_child_links",
+          filter: `child_id=eq.${user.id}`,
+        },
+        async () => {
+          toast.success("Device Paired by Grown-up! 🎉");
+          await refreshProfile();
+          navigate({ to: "/child" });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   return (
-    <div className="min-h-screen grid place-items-center p-6">
-      <div className="card-bubbly w-full max-w-md text-center">
-        <div className="text-6xl mb-4">🔗</div>
-        <h1 className="text-3xl font-extrabold mb-2">Enter your parent's code</h1>
-        <p className="text-muted-foreground mb-6">Ask your grown-up for the 6-digit code from their dashboard.</p>
-        <form onSubmit={submit} className="space-y-4">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-            placeholder="123456"
-            inputMode="numeric"
-            maxLength={6}
-            className="w-full text-center text-4xl font-extrabold tracking-[0.5em] rounded-2xl border-2 border-input bg-white py-4 focus:outline-none focus:border-primary"
-          />
-          <button type="submit" disabled={busy || code.length !== 6} className="btn-bubbly btn-primary w-full disabled:opacity-60">
-            {busy ? "Linking…" : "Link with parent"}
-          </button>
-          <button type="button" onClick={() => navigate({ to: "/child" })} className="font-bold underline text-sm">
-            Skip for now
-          </button>
-        </form>
+    <div className="fixed inset-0 bg-black z-[100] flex flex-col items-center justify-center p-6 font-sans">
+      <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-[2.5rem] p-8 text-center shadow-2xl relative overflow-hidden">
+        
+        {/* Animated Neon Radar Pulse for pairing status */}
+        <div className="relative w-24 h-24 mx-auto mb-6 flex items-center justify-center">
+          <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping duration-1000" />
+          <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center border border-emerald-500/30">
+            <ShieldAlert size={32} className="text-emerald-400" />
+          </div>
+        </div>
+
+        <h1 className="text-4xl font-black italic uppercase tracking-tighter text-white mb-3">
+          Device Locked
+        </h1>
+        
+        <p className="text-sm text-white/60 font-medium px-4 mb-8">
+          Give this setup code to your grown-up. They need to enter it on their dashboard to activate your account!
+        </p>
+
+        {/* Big clean copyable display box for the kid to show the parent */}
+        <div className="bg-white text-black font-black text-center py-6 rounded-2xl text-5xl tracking-[0.4em] font-mono shadow-[0_15px_30px_rgba(255,255,255,0.05)] select-all mb-8">
+          {displayCode || <Loader2 className="animate-spin mx-auto text-black" size={32} />}
+        </div>
+
+        <div className="flex items-center justify-center gap-2 text-white/40 text-[10px] font-black uppercase tracking-widest">
+          <Loader2 size={12} className="animate-spin text-emerald-400" />
+          Waiting for parent approval...
+        </div>
       </div>
     </div>
   );
