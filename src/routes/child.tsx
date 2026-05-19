@@ -40,11 +40,11 @@ function ChildView() {
     if (profile && profile.role !== "child") navigate({ to: "/parent" });
   }, [user, profile, loading, navigate]);
 
-  // 2. Active Verification Connection Check Gate
+  // 2. Initial Pairing Status Lookup & Realtime Subscription Loop
   useEffect(() => {
+    if (!user || loading) return;
+
     const verifyPairingStatus = async () => {
-      if (!user) return;
-      
       try {
         const { data, error } = await supabase
           .from("parent_child_links")
@@ -54,7 +54,6 @@ function ChildView() {
 
         if (error) throw error;
 
-        // Strict Check: Confirm record exists AND contains a non-empty parent UUID string
         if (data && typeof data.parent_id === "string" && data.parent_id.trim() !== "") {
           setIsPaired(true);
         } else {
@@ -62,17 +61,44 @@ function ChildView() {
         }
       } catch (err) {
         console.error("Pairing lookup failure:", err);
-        setIsPaired(false); // Default lock state on system lookup failures
+        setIsPaired(false); 
       } finally {
         setCheckingPairing(false);
       }
     };
 
-    if (user && !loading) {
-      verifyPairingStatus();
-    }
+    // Run the initial check
+    verifyPairingStatus();
+
+    // Set up Realtime listener to watch if a link is added or broken live
+    const pairingChannel = supabase
+      .channel(`pairing-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*", // Listen to INSERT or DELETE changes
+          schema: "public",
+          table: "parent_child_links",
+          filter: `child_id=eq.${user.id}`,
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            setIsPaired(true);
+            toast.success("Device successfully activated by parent! 🎉");
+          } else if (payload.eventType === "DELETE") {
+            setIsPaired(false);
+            toast.error("Device unlinked by parent.");
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(pairingChannel);
+    };
   }, [user, loading]);
 
+  // 3. Track Pause State changes from profile updates
   useEffect(() => {
     setPaused(profile?.paused ?? false);
   }, [profile?.paused]);
@@ -93,6 +119,7 @@ function ChildView() {
     return () => { supabase.removeChannel(ch); };
   }, [user]);
 
+  // 4. Data Loading Engines
   useEffect(() => {
     let q = supabase.from("videos").select("*").order("created_at", { ascending: false });
     if (cat !== "all") q = q.eq("category", cat);
@@ -142,7 +169,7 @@ function ChildView() {
 
   return (
     <div className="min-h-screen pb-12">
-      {/* FLOATING SYSTEM LOG DEBUGGER - REMOVE ONCE VERIFIED */}
+      {/* FLOATING SYSTEM LOG DEBUGGER */}
       <div className="bg-yellow-500 text-black p-2 text-xs font-mono fixed bottom-2 left-2 z-50 rounded shadow-md border border-black/20">
         Paired: {isPaired ? "TRUE" : "FALSE"} | Paused: {paused ? "TRUE" : "FALSE"} | Loading: {loading ? "TRUE" : "FALSE"}
       </div>
@@ -201,8 +228,8 @@ function ChildView() {
         ))}
       </main>
 
-      {/* Screen lock strictly evaluates both pause state and explicit unpaired condition */}
-      {(paused || isPaired === false) && (
+      {/* Screen lock overlay triggered instantly by either state change */}
+      {(paused || !isPaired) && (
         <PauseOverlay reason={!isPaired ? "unlinked" : "paused"} />
       )}
     </div>
